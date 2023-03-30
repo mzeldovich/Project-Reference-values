@@ -13,7 +13,7 @@ More than 2000 children (8-12 years) and adolescents (12-7 years) from the Germa
 4. To derive **reference values** for subgroups (e.g., age groups, gender, health status) using percentiles.
 
 # Funding
-The project is funded by the Dr. Senckenbergische Stiftung (Germany), Bürgerhospital Frankfurt am Main - Clementine Kinderhospital, Nibelungenallee 37–41, 60318, Frankfurt am Main (http://www.senckenbergische-stiftung.de/).
+The project is funded by the [Dr. Senckenbergische Stiftung](http://www.senckenbergische-stiftung.de/) (Germany), Bürgerhospital Frankfurt am Main - Clementine Kinderhospital, Nibelungenallee 37–41, 60318, Frankfurt am Main.
 
 # Ethical approval
 The study was conducted in accordance with all relevant laws of Germany, including but not limited to the ICH Harmonized Tripartite Guideline for Good Clinical Practice ("ICH GCP") and the World Medical Association Declaration of Helsinki ("Ethical Principles for Medical Research Involving Human Subjects"). The Ethics Committee of the University Medical Center Göttingen has approved the studies (application number 19/4/18).
