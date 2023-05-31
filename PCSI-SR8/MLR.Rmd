@@ -1,0 +1,225 @@
+---
+title: "05_MLR"
+output: html_document
+date: "2023-03-29"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# load packages
+
+```{r}
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(lm.beta)
+library(car)
+library(GGally)
+library(MASS)
+library(broom)
+```
+
+
+# import data
+
+```{r}
+load("data_final.RData")
+
+# back-up data
+dat.f2<-dat.f
+```
+
+
+# MLR
+## preparations
+```{r}
+# identifying higher educational level
+edu <- function (x) {
+  ifelse(x == "None", 1,
+         ifelse(x == "Primary school", 2,
+                ifelse(x == "Secondary school", 3,
+                       ifelse(x == "Occupational school", 4,
+                              ifelse (x == "University", 5, 0)))))
+}
+
+dat.f2$education.mum<-edu(dat.f2$education.mum)
+dat.f2$education.dad<-edu(dat.f2$education.dad)
+
+dat.f2$education.par <- ifelse(dat.f2$education.mum > dat.f2$education.dad,
+                                    dat.f2$education.mum,
+                                    ifelse(dat.f2$education.dad > dat.f2$education.mum,
+                                           dat.f2$education.dad, dat.f2$education.mum))
+
+
+# cluster for educational level
+dat.f2$education.par <- ifelse(dat.f2$education.par == 1, 1,
+                               ifelse(dat.f2$education.par == 2 |
+                                        dat.f2$education.par == 3 |
+                                        dat.f2$education.par == 4, 2,
+                                      ifelse (dat.f2$education.par == 5, 3, 0)))
+
+dat.f2$education.par <-
+  factor(dat.f2$education.par,
+         levels=c(0,1,2,3),
+         labels=c("Unknown",
+                  "None",
+                  "School",
+                  "University"))
+
+# check
+table(dat.f2$education.par)
+```
+
+
+## LINEAR regression
+### total score
+
+```{r}
+#back-up data
+dat.f3<-dat.f2
+
+# drop unused levels
+dat.f3$sex.kid = dat.f3$sex.kid[drop = T]
+
+# check
+table(dat.f3$sex.kid)
+chisq.test(table(dat.f3$sex.kid))
+```
+
+```{r}
+dat.f3 = dat.f3 %>%
+  filter(., age.cluster == c("Children"))
+```
+
+```{r}
+sub3<-subset(dat.f3, select = c(age.kid, sex.kid, sick, pcsisr8.total))
+
+# data overview
+ggpairs(sub3)
+hist(dat.f3$pcsisr8.total)
+```
+
+
+```{r}
+# regression
+pcsisr8.total.1<-lm(pcsisr8.total~., data = sub3)
+summary(pcsisr8.total.1)
+
+pcsisr8.total.2<-lm(pcsisr8.total~.^2, data = sub3)
+summary(pcsisr8.total.2)
+
+pcsisr8.total.3<-lm(pcsisr8.total~.^3, data = sub3)
+summary(pcsisr8.total.3)
+
+anova(pcsisr8.total.1, pcsisr8.total.2, pcsisr8.total.3) # non-significant, model 1
+```
+
+
+```{r}
+# standardized coefficients
+lm.beta(pcsisr8.total.1)
+
+# multicollinearity
+vif(pcsisr8.total.1)
+
+# model plot
+par(mfrow = c(2,2))
+plot(pcsisr8.total.1)
+```
+
+
+```{r}
+# select sig. variables
+relevant.x <- function (x) {
+    y <- summary(x)$coeff[-1,4] < 0.05
+     names(y)[y == TRUE]
+}
+
+relevant.x(pcsisr8.total.1)
+relevant.x(pcsisr8.total.2) # none significant
+relevant.x(pcsisr8.total.3) # none significant
+```
+
+## NEGATIVE binomial regression
+### total score
+
+```{r}
+# regression
+pcsisr8.total.1.nb<-glm.nb(pcsisr8.total~., data = sub3)
+summary(pcsisr8.total.1.nb) 
+
+pcsisr8.total.2.nb<-glm.nb(pcsisr8.total~.^2, data = sub3)
+summary(pcsisr8.total.2.nb)
+
+pcsisr8.total.3.nb<-glm.nb(pcsisr8.total~.^3, data = sub3)
+summary(pcsisr8.total.3.nb)
+
+anova(pcsisr8.total.1.nb, pcsisr8.total.2.nb, pcsisr8.total.3.nb)
+# non significant, model 1
+```
+
+
+```{r}
+# select sig. variables
+relevant.x(pcsisr8.total.1.nb)
+relevant.x(pcsisr8.total.2.nb) # none significant
+relevant.x(pcsisr8.total.3.nb) # none significant
+```
+
+## Model comparison
+
+```{r}
+# model comparisons
+glance(pcsisr8.total.1) # AIC 6327, BIC 6351
+glance(pcsisr8.total.1.nb) # AIC 5386, BIC 5411
+
+glance(pcsisr8.total.2) # AIC 6331, BIC 6370
+glance(pcsisr8.total.2.nb) # AIC 5391, BIC 5431
+
+glance(pcsisr8.total.3) # AIC 6331, BIC 6375
+glance(pcsisr8.total.3.nb) # AIC 5392, BIC 5437
+
+# negative binomial regression fits better
+```
+
+### scales
+
+```{r}
+nb.scales.1 <- function (x) {
+  nb.x<-glm.nb(x~age.kid+sex.kid+sick, data = dat.f3)
+  summary(nb.x)
+}
+
+nb.scales.1(dat.f3$pcsisr8.physical)
+nb.scales.1(dat.f3$pcsisr8.emotional)
+nb.scales.1(dat.f3$pcsisr8.cognitive)
+nb.scales.1(dat.f3$pcsisr8.fatigue)
+```
+
+
+```{r}
+nb.scales.2 <- function (x) {
+  nb.x<-glm.nb(x~(age.kid+sex.kid+sick)^2, data = dat.f3)
+  summary(nb.x)
+}
+
+nb.scales.2(dat.f3$pcsisr8.physical)
+nb.scales.2(dat.f3$pcsisr8.emotional)
+nb.scales.2(dat.f3$pcsisr8.cognitive)
+nb.scales.2(dat.f3$pcsisr8.fatigue)
+```
+
+
+```{r}
+nb.scales.3 <- function (x) {
+  nb.x<-glm.nb(x~(age.kid+sex.kid+sick)^3, data = dat.f3)
+  summary(nb.x)
+}
+
+nb.scales.3(dat.f3$pcsisr8.physical)
+nb.scales.3(dat.f3$pcsisr8.emotional)
+nb.scales.3(dat.f3$pcsisr8.cognitive)
+nb.scales.3(dat.f3$pcsisr8.fatigue)
+```

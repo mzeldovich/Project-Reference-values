@@ -1,0 +1,401 @@
+---
+title: "06A_MI_imputiert"
+output: html_document
+date: "2023-03-29"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# load packages
+
+```{r}
+library(dplyr)
+library(tidyverse)
+library(lavaan)
+library(semTools)
+library(table1)
+```
+
+
+# TBI-sample
+## import data
+```{r}
+pcsi8.1.new<-read.csv2("PCSI_kids_new_leo.csv", sep = ";", header = T)
+```
+
+
+## preparation of tbi-data
+```{r}
+# removing unnecessary columns
+pcsi8.1.new<-subset(pcsi8.1.new) %>% 
+  dplyr::select(-ends_with("prae")) %>% 
+  dplyr::select(-contains("RAPID")) %>% 
+  dplyr::select(-c("Testdatum", "Gender_K", "Alter", "Schweregrad", "Sonstige.Erkrankungen",
+                   "Anmerkungen")) %>% 
+  dplyr::select(-contains("Gesamt"))
+```
+
+```{r}
+# renaming
+pcsi8.1.new<-rename(pcsi8.1.new, id="ID", age.cluster="Altersgruppe", 
+                pcsisr801="Item1_phy_C_post",
+                pcsisr802="Item2_phy_C_post", 
+                pcsisr803="Item3_phy_C_post", 
+                pcsisr804="Item4_phy_C_post",
+                pcsisr805="Item5_phy_C_post", 
+                pcsisr806="Item6_phy_C_post", 
+                pcsisr807="Item7_phy_C_post",
+                pcsisr808="Item8_phy_C_post", 
+                pcsisr809="Item9_em_C_post", 
+                pcsisr810="Item10_em_C_post",
+                pcsisr811="Item11_em_C_post", 
+                pcsisr812="Item12_kog_C_post", 
+                pcsisr813="Item13_kog_C_post",
+                pcsisr814="Item14_kog_C_post", 
+                pcsisr815="Item15_kog_C_post", 
+                pcsisr816="Item16_fat_C_post",
+                pcsisr817="Item17_fat_C_post")
+```
+
+```{r}
+which(pcsi8.1.new == 99 | pcsi8.1.new == "ND" | pcsi8.1.new == "NC", arr.ind = TRUE)
+# row/column: 35/3, 37/8, 53/13, 131/15, 9/19
+
+pcsi8.1.new[35,3]
+pcsi8.1.new[37,8]
+pcsi8.1.new[53,13]
+pcsi8.1.new[131,15]
+pcsi8.1.new[9,19]
+
+pcsi8.1.new[pcsi8.1.new == 99 | pcsi8.1.new == "ND" | pcsi8.1.new == "NC"]<-NA
+
+# check
+pcsi8.1.new[35,3]
+pcsi8.1.new[37,8]
+pcsi8.1.new[53,13]
+pcsi8.1.new[131,15]
+pcsi8.1.new[9,19]
+```
+
+```{r}
+which(pcsi8.1.new == "ß", arr.ind = TRUE) # row 82, column 5
+pcsi8.1.new[82,5]
+pcsi8.1.new[pcsi8.1.new == "ß"]<-0
+pcsi8.1.new[82,5]
+pcsi8.1.new$pcsisr803<-as.integer(pcsi8.1.new$pcsisr803)
+```
+
+```{r}
+# back-up
+pcsi8.1<-pcsi8.1.new
+```
+
+## auxiliary variables
+
+```{r}
+physical.8 <- c("pcsisr801", "pcsisr802", "pcsisr803", 
+                "pcsisr804", "pcsisr805", "pcsisr806", 
+                "pcsisr807","pcsisr808")
+
+emotional.8 <- c("pcsisr809", "pcsisr810", "pcsisr811")
+
+cognitive.8 <- c("pcsisr812", "pcsisr813", "pcsisr814", "pcsisr815")
+
+fatigue.8 <- c("pcsisr816", "pcsisr817")
+
+total.8 <- c(physical.8, emotional.8, cognitive.8, fatigue.8)
+```
+
+```{r}
+pcsi8.1$missings = apply(pcsi8.1, 1, function(x){sum(is.na(x))}) 
+```
+
+```{r}
+table(pcsi8.1$missings)
+```
+
+## Replace missing values with mean of the remaining items
+
+```{r}
+pcsi8.1[pcsi8.1$missings == 1, physical.8] = apply(pcsi8.1[pcsi8.1$missings == 1, physical.8], 2, 
+      function(x)(ifelse(is.na(x) == T, round(rowMeans(pcsi8.1[pcsi8.1$missings == 1, physical.8], na.rm = T)), x)))
+```
+
+```{r}
+pcsi8.1[pcsi8.1$missings == 1, emotional.8] = apply(pcsi8.1[pcsi8.1$missings == 1, emotional.8], 2, 
+      function(x)(ifelse(is.na(x) == T, round(rowMeans(pcsi8.1[pcsi8.1$missings == 1, emotional.8], na.rm = T)), x)))
+```
+
+```{r}
+pcsi8.1[pcsi8.1$missings == 1, cognitive.8] = apply(pcsi8.1[pcsi8.1$missings == 1, cognitive.8], 2, 
+      function(x)(ifelse(is.na(x) == T, round(rowMeans(pcsi8.1[pcsi8.1$missings == 1, cognitive.8], na.rm = T)), x)))
+```
+
+```{r}
+pcsi8.1[pcsi8.1$missings == 1, fatigue.8] = apply(pcsi8.1[pcsi8.1$missings == 1, fatigue.8], 2, 
+      function(x)(ifelse(is.na(x) == T, round(rowMeans(pcsi8.1[pcsi8.1$missings == 1, fatigue.8], na.rm = T)), x)))
+```
+
+## Scales
+
+```{r}
+pcsi8.1$pcsisr8.physical = apply(pcsi8.1[physical.8],1,sum)
+pcsi8.1$pcsisr8.emotional = apply(pcsi8.1[emotional.8],1,sum)
+pcsi8.1$pcsisr8.cognitive = apply(pcsi8.1[cognitive.8],1,sum)
+pcsi8.1$pcsisr8.fatigue = apply(pcsi8.1[fatigue.8],1,sum)
+pcsi8.1$pcsisr8.total = apply(pcsi8.1[total.8],1,sum)
+```
+
+
+```{r}
+# back-up data
+pcsi8.2 <- pcsi8.1
+```
+
+## response patterns
+```{r}
+table1(~ factor(pcsisr801) + factor(pcsisr802) + factor(pcsisr803) +
+         factor(pcsisr804) + factor(pcsisr805) + factor(pcsisr806) +
+         factor(pcsisr807) + factor(pcsisr808) + factor(pcsisr809) +
+         factor(pcsisr810) + factor(pcsisr811) + factor(pcsisr812) +
+         factor(pcsisr813) + factor(pcsisr814) + factor(pcsisr815) +
+         factor(pcsisr816) + factor(pcsisr817), data = pcsi8.2)
+
+# all response categories are occupied
+```
+
+## CFA model
+```{r}
+eight.model <- ' # measurement model
+                   physical =~ pcsisr801 + 
+                               pcsisr802 + 
+                               pcsisr803 + 
+                               pcsisr804 + 
+                               pcsisr805 + 
+                               pcsisr806 +
+                               pcsisr807 + 
+                               pcsisr808
+                               
+                  emotional =~ pcsisr809 + 
+                               pcsisr810 + 
+                               pcsisr811
+                               
+                  cognitive =~ pcsisr812 + 
+                               pcsisr813 + 
+                               pcsisr814 + 
+                               pcsisr815
+                               
+                    fatigue =~ pcsisr816 + 
+                               pcsisr817
+                               '
+```
+
+## CFA
+```{r}
+fit.pcsi8.o <- cfa(eight.model, data = pcsi8.2, ordered = TRUE, std.lv = T)
+# covariance matrix of latent variables is not positive definite
+```
+
+```{r}
+lavInspect(fit.pcsi8.o, "cov.lv")
+```
+
+```{r}
+summary(fit.pcsi8.o, fit.measures = TRUE, standardized = TRUE)
+fitmeasures(fit.pcsi8.o, c("chisq.scaled","df.scaled", "cfi.scaled", "tli.scaled","rmsea.scaled",
+                           "rmsea.ci.lower.scaled", "rmsea.ci.upper.scaled", "srmr"))
+# good model fit
+fitmeasures(fit.pcsi8.o, "chisq.scaled")/fitmeasures(fit.pcsi8.o, "df.scaled")
+```
+
+
+# HEALTHY sample
+## import data
+```{r}
+load("data_final.RData")
+```
+
+## CFA
+```{r}
+fit.pcsi8.h <- cfa(eight.model, data = dat.f, ordered = TRUE, std.lv = TRUE)
+summary(fit.pcsi8.h, fit.measures = TRUE, standardized = TRUE)
+fitmeasures(fit.pcsi8.h, c("chisq.scaled","df.scaled", "cfi.scaled", "tli.scaled","rmsea.scaled",
+                           "rmsea.ci.lower.scaled", "rmsea.ci.upper.scaled", "srmr"))
+# good model fit
+fitmeasures(fit.pcsi8.h, "chisq.scaled")/fitmeasures(fit.pcsi8.h, "df.scaled")
+```
+
+
+# MIXED sample
+## preparation
+```{r}
+# subsetting
+bet1<-dat.f %>% 
+  dplyr::select(id, age.cluster, pcsisr801:pcsisr817)
+
+# add identifications
+bet1$tbi<-1
+pcsi8.2$tbi<-2
+
+bet1$age.cluster<-as.numeric(bet1$age.cluster)
+
+# merging
+tbi.pcsisr8<-bind_rows(bet1, pcsi8.2)
+```
+
+## CFA
+```{r}
+fit.pcsi8.mix.o <- cfa(eight.model, data = tbi.pcsisr8, ordered = TRUE, std.lv = TRUE)
+
+summary(fit.pcsi8.mix.o, fit.measures = TRUE, standardized = TRUE)
+
+fitmeasures(fit.pcsi8.mix.o, c("chisq.scaled","df.scaled", "cfi.scaled", "tli.scaled","rmsea.scaled",
+                           "rmsea.ci.lower.scaled", "rmsea.ci.upper.scaled", "srmr")) # good model fit
+
+fitmeasures(fit.pcsi8.mix.o, "chisq.scaled")/fitmeasures(fit.pcsi8.mix.o, "df.scaled")
+```
+
+
+# measurement invariance: original data, original model
+## Baseline model
+
+```{r}
+# preparing a matrix for results
+all.results.pcsisr8<-matrix(NA, nrow = 3, ncol = 9)
+colnames(all.results.pcsisr8)<-c("chisq.scaled", "df.scaled", "pvalue.scaled", "rmsea.scaled",
+                                 "rmsea.ci.lower.scaled", "rmsea.ci.upper.scaled",
+                                 "cfi.scaled","tli.scaled", "srmr")
+
+# baseline model
+baseline <- measEq.syntax(configural.model = eight.model,
+                           data = tbi.pcsisr8,
+                           ordered = c("pcsisr801", "pcsisr802", "pcsisr803", "pcsisr804", "pcsisr805" , 
+                                       "pcsisr806", "pcsisr807", "pcsisr808", "pcsisr809", "pcsisr810" ,
+                                       "pcsisr811", "pcsisr812", "pcsisr813", "pcsisr814", "pcsisr815",
+                                       "pcsisr816", "pcsisr817"),
+                           parameterization = "delta", ID.fac = "std.lv",
+                           ID.cat = "Wu.Estabrook.2016", group = "tbi",
+                           group.equal = "configural")
+
+summary(baseline)
+
+# constraints
+cat(as.character(baseline))
+
+# as.character to submit to lavaan
+model.baseline <- as.character(baseline)
+
+# Fitting baseline model in lavaan via cfa function
+fit.baseline <- cfa(model.baseline, data = tbi.pcsisr8, group = "tbi",
+                     ordered = c("pcsisr801", "pcsisr802", "pcsisr803", "pcsisr804", "pcsisr805" , 
+                                 "pcsisr806", "pcsisr807", "pcsisr808", "pcsisr809", "pcsisr810" ,
+                                 "pcsisr811", "pcsisr812", "pcsisr813", "pcsisr814", "pcsisr815",
+                                 "pcsisr816", "pcsisr817"), std.lv = TRUE) # covariance matrix of latent
+                                                            # variables is not positive definite
+
+lavInspect(fit.baseline, "cov.lv")
+
+# results
+summary(fit.baseline)
+
+# adding results to matrix
+all.results.pcsisr8[1,]<-round(data.matrix(fitmeasures(fit.baseline,
+                                                       fit.measures = c("chisq.scaled", "df.scaled", 
+                                                                        "pvalue.scaled", "rmsea.scaled",
+                                                                        "rmsea.ci.lower.scaled",
+                                                                        "rmsea.ci.upper.scaled",
+                                                                        "cfi.scaled","tli.scaled",
+                                                                        "srmr"))),
+                       digits=3)
+
+fitmeasures(fit.baseline, "chisq.scaled")/fitmeasures(fit.baseline, "df.scaled")
+```
+
+## Model with thresholds invariance
+
+```{r}
+# thresholds model
+prop4c <- measEq.syntax(configural.model = eight.model,
+                        data = tbi.pcsisr8,
+                        ordered = c("pcsisr801", "pcsisr802", "pcsisr803", "pcsisr804", "pcsisr805" , 
+                                    "pcsisr806", "pcsisr807", "pcsisr808", "pcsisr809", "pcsisr810" ,
+                                    "pcsisr811", "pcsisr812", "pcsisr813", "pcsisr814", "pcsisr815",
+                                    "pcsisr816", "pcsisr817"),
+                        parameterization = "delta", ID.fac = "std.lv",
+                        ID.cat = "Wu.Estabrook.2016", group = "tbi",
+                        group.equal = c("thresholds"))
+
+model.prop4c <- as.character(prop4c)
+
+# fitting into lavaan
+fit.prop4c <- cfa(model.prop4c, data = tbi.pcsisr8, group = "tbi",
+                  ordered = c("pcsisr801", "pcsisr802", "pcsisr803", "pcsisr804", "pcsisr805" , 
+                              "pcsisr806", "pcsisr807", "pcsisr808", "pcsisr809", "pcsisr810" ,
+                              "pcsisr811", "pcsisr812", "pcsisr813", "pcsisr814", "pcsisr815",
+                              "pcsisr816", "pcsisr817"), std.lv = TRUE) # covariance matrix of latent
+                                                            # variables is not positive definite
+
+# results
+summary(fit.prop4c)
+
+# adding results to matrix
+all.results.pcsisr8[2,]<-round(data.matrix(fitmeasures(fit.prop4c,
+                                                       fit.measures = c("chisq.scaled", "df.scaled", 
+                                                                        "pvalue.scaled", "rmsea.scaled",
+                                                                        "rmsea.ci.lower.scaled",
+                                                                        "rmsea.ci.upper.scaled",
+                                                                        "cfi.scaled","tli.scaled",
+                                                                        "srmr"))),
+                       digits=3)
+
+fitmeasures(fit.prop4c, "chisq.scaled")/fitmeasures(fit.prop4c, "df.scaled")
+
+# comparing the models
+lavTestLRT(fit.baseline,fit.prop4c) # same measures
+```
+
+## Model with thresholds and loading invariance
+
+```{r}
+# thresholds and loading model
+prop7c <- measEq.syntax(configural.model = eight.model,
+                        data = tbi.pcsisr8,
+                        ordered = c("pcsisr801", "pcsisr802", "pcsisr803", "pcsisr804", "pcsisr805" , 
+                                    "pcsisr806", "pcsisr807", "pcsisr808", "pcsisr809", "pcsisr810" ,
+                                    "pcsisr811", "pcsisr812", "pcsisr813", "pcsisr814", "pcsisr815",
+                                    "pcsisr816", "pcsisr817"),
+                        parameterization = "delta", ID.fac = "std.lv",
+                        ID.cat = "Wu.Estabrook.2016", group = "tbi",
+                        group.equal = c("thresholds", "loadings"))
+
+model.prop7c <- as.character(prop7c)
+
+# fitting into lavaan
+fit.prop7c <- cfa(model.prop7c, data = tbi.pcsisr8, group = "tbi",
+                  ordered = c("pcsisr801", "pcsisr802", "pcsisr803", "pcsisr804", "pcsisr805" , 
+                              "pcsisr806", "pcsisr807", "pcsisr808", "pcsisr809", "pcsisr810" ,
+                              "pcsisr811", "pcsisr812", "pcsisr813", "pcsisr814", "pcsisr815",
+                              "pcsisr816", "pcsisr817"), std.lv = TRUE) # covariance matrix of latent
+                                                            # variables is not positive definite
+
+# results
+summary(fit.prop7c)
+
+# adding results to matrix
+all.results.pcsisr8[3,]<-round(data.matrix(fitmeasures(fit.prop7c,
+                                                       fit.measures = c("chisq.scaled", "df.scaled", 
+                                                                        "pvalue.scaled", "rmsea.scaled",
+                                                                        "rmsea.ci.lower.scaled",
+                                                                        "rmsea.ci.upper.scaled",
+                                                                        "cfi.scaled","tli.scaled",
+                                                                        "srmr"))),
+                       digits=3)
+
+fitmeasures(fit.prop7c, "chisq.scaled")/fitmeasures(fit.prop7c, "df.scaled")
+
+# comparing the models
+lavTestLRT(fit.prop4c, fit.prop7c) # non-significant, prop4c
+```
+

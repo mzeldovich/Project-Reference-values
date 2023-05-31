@@ -1,0 +1,69 @@
+---
+title: "04_CFA"
+output: html_document
+date: "2023-03-29"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# load packages
+
+```{r}
+library(tidyverse)
+library(dplyr)
+library(lavaan)
+```
+
+
+# import data
+
+```{r}
+load("data_final.RData")
+```
+
+# cfa model
+
+```{r}
+eight.model <- ' # measurement model
+                   physical =~ pcsisr801 + pcsisr802 + pcsisr803 + pcsisr804 + pcsisr805 + pcsisr806 +
+                               pcsisr807 + pcsisr808
+                  emotional =~ pcsisr809 + pcsisr810 + pcsisr811
+                  cognitive =~ pcsisr812 + pcsisr813 + pcsisr814 + pcsisr815
+                    fatigue =~ pcsisr816 + pcsisr817
+               '
+```
+
+# cfa
+
+```{r}
+fit3 <- cfa(eight.model, data = dat.f, ordered = TRUE, std.lv = TRUE)
+summary(fit3, fit.measures = TRUE, standardized = TRUE)
+
+fitmeasures(fit3, c("chisq.scaled", "df.scaled", "pvalue.scaled", "cfi.scaled","tli.scaled",
+                    "rmsea.scaled", "rmsea.ci.lower.scaled", "rmsea.ci.upper.scaled", "srmr"))
+# good model fit
+fitmeasures(fit3, "chisq.scaled")/fitmeasures(fit3, "df.scaled")
+```
+
+
+# loadings
+
+```{r}
+loadings3<-as.data.frame(standardizedSolution(fit3)) %>% 
+  filter(op=="=~"); loadings3
+
+write_csv(loadings3, file = "Intercorrelations_PCSI-SR-8.csv")
+save(loadings3, file = "Intercorrelations_PCSI-SR-8.RData")
+```
+
+# co-variances
+
+```{r}
+variances3<-as.data.frame(standardizedSolution(fit3)) %>% 
+  filter(op=="~~"); variances3
+
+write_csv(variances3, file = "Co-Variances_PCSI-SR-8.csv")
+save(variances3, file = "Co-Variances_PCSI-SR-8.RData")
+```
