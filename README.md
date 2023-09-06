@@ -5,6 +5,8 @@ The question of whether a patient's questionnaire scores deviate from the health
 
 More than 2000 children (8-12 years) and adolescents (12-17 years) from the German general population participated in the study. The QOLIBRI-KID/ADO, its short version QOLIBRI-KID/ADO-OS and the PCSI were administered online to the participants in an adapted form.
 
+A Shiny app with reference value tables is available at https://reference-values.shinyapps.io/Tables_Reference_values/.
+
 ## Aimes
 
 1. To examine the applicability of the questionnaires in German pediatric samples from the general population. 
