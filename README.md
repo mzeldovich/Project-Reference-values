@@ -3,7 +3,7 @@ Traumatic brain injury (TBI) is a major cause of short- and long-term impairment
 
 The question of whether a patient's questionnaire scores deviate from the healthy norm can be answered by using the scores of a comparable healthy reference population. Since these values do not yet exist for either the QOLIBRI-Kid/Ado or the PCSI, the aim of this research project is to establish reference values for both instruments and to make them available to clinicians and researchers. 
 
-More than 2000 children (8-12 years) and adolescents (12-7 years) from the German general population participated in the study. The QOLIBRI-KID/ADO, its short version QOLIBRI-KID/ADO-OS and the PCSI were administered online to the participants in an adapted form.
+More than 2000 children (8-12 years) and adolescents (12-17 years) from the German general population participated in the study. The QOLIBRI-KID/ADO, its short version QOLIBRI-KID/ADO-OS and the PCSI were administered online to the participants in an adapted form.
 
 ## Aimes
 
