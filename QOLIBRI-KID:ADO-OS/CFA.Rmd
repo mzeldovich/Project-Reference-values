@@ -1,0 +1,63 @@
+---
+title: "03_CFA"
+output: html_document
+date: "2023-03-29"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# load packages
+
+```{r}
+library(tidyverse)
+library(dplyr)
+library(lavaan)
+```
+
+# import data
+
+```{r}
+load("data_final.RData")
+```
+
+# cfa model
+
+```{r}
+os.model <- ' # measurement model
+                hrQoL =~ OS1 + OS2 + OS3 + OS4 + OS5 + OS6
+            '
+```
+
+# cfa
+
+```{r}
+fit2 <- cfa(os.model, data = dat.f, ordered = TRUE, std.lv = TRUE)
+summary(fit2, fit.measures = TRUE, standardized = TRUE)
+
+fitmeasures(fit2, c("chisq.scaled", "df.scaled", "pvalue.scaled", "cfi.scaled","tli.scaled",
+                    "rmsea.scaled", "rmsea.ci.lower.scaled", "rmsea.ci.upper.scaled", "srmr"))
+# good model fit (except upper rmsea)
+fitmeasures(fit2, "chisq.scaled")/fitmeasures(fit2, "df.scaled")
+```
+
+# loadings
+
+```{r}
+loadings2<-as.data.frame(standardizedSolution(fit2)) %>% 
+  filter(op=="=~"); loadings2
+
+write_csv(loadings2, file = "Intercorrelations_QOLIBRI_KA_OS.csv")
+save(loadings2, file = "Intercorrelations_QOLIBRI_KA_OS.RData")
+```
+
+# co-variances
+
+```{r}
+variances2<-as.data.frame(standardizedSolution(fit2)) %>% 
+  filter(op=="~~"); variances2
+
+write_csv(variances2, file = "Co-Variances_QOLIBRI_KA_OS.csv")
+save(variances2, file = "Co-Variances_QOLIBRI_KA_OS.RData")
+```

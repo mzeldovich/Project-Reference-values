@@ -1,0 +1,102 @@
+---
+title: "06_Reference_values"
+output: html_document
+date: "2023-03-29"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# load packages
+
+```{r}
+library(tidyverse)
+library(dplyr)
+```
+
+# import data
+
+```{r}
+load("data_healthy.RData")
+```
+
+# reference values
+
+```{r}
+ref_qol.os<-dat.h %>%
+   dplyr::select(sex.kid, age.cluster, score.qolibri.os) %>% 
+   group_by(sex.kid, age.cluster) %>%
+   summarize(count = n(),
+             quantiles_0.025 = round(quantile(score.qolibri.os, 
+                                  probs = c(0.025))),
+             quantiles_0.05 = round(quantile(score.qolibri.os, 
+                                  probs = c(0.05))),
+             quantiles_0.16 = round(quantile(score.qolibri.os, 
+                                  probs = c(0.16))),  
+             quantiles_0.30 = round(quantile(score.qolibri.os, 
+                                  probs = c(0.30))),
+             quantiles_0.40 = round(quantile(score.qolibri.os, 
+                                  probs = c(0.40))),
+             quantiles_0.50 = round(quantile(score.qolibri.os, 
+                                  probs = c(0.50))),
+             quantiles_0.60 = round(quantile(score.qolibri.os, 
+                                  probs = c(0.60))),
+             quantiles_0.70 = round(quantile(score.qolibri.os, 
+                                  probs = c(0.70))),
+             quantiles_0.85 = round(quantile(score.qolibri.os, 
+                                  probs = c(0.85))),
+             quantiles_0.95 = round(quantile(score.qolibri.os, 
+                                  probs = c(0.95))),
+             quantiles_0.975 = round(quantile(score.qolibri.os, 
+                                  probs = c(0.975))))
+
+write_csv(ref_qol.os, file = "ref_qolibri.os_cluster.csv")
+```
+
+## general values
+
+```{r}
+dat_ref_qol.os<-dat.h %>%
+   dplyr::select(score.qolibri.os) %>% 
+   summarize(count = n(),
+             quantiles_0.025 = round(quantile(score.qolibri.os, 
+                                  probs = c(0.025))),
+             quantiles_0.05 = round(quantile(score.qolibri.os, 
+                                  probs = c(0.05))),
+             quantiles_0.16 = round(quantile(score.qolibri.os, 
+                                  probs = c(0.16))),  
+             quantiles_0.30 = round(quantile(score.qolibri.os, 
+                                  probs = c(0.30))),
+             quantiles_0.40 = round(quantile(score.qolibri.os, 
+                                  probs = c(0.40))),
+             quantiles_0.50 = round(quantile(score.qolibri.os, 
+                                  probs = c(0.50))),
+             quantiles_0.60 = round(quantile(score.qolibri.os, 
+                                  probs = c(0.60))),
+             quantiles_0.70 = round(quantile(score.qolibri.os, 
+                                  probs = c(0.70))),
+             quantiles_0.85 = round(quantile(score.qolibri.os, 
+                                  probs = c(0.85))),
+             quantiles_0.95 = round(quantile(score.qolibri.os, 
+                                  probs = c(0.95))),
+             quantiles_0.975 = round(quantile(score.qolibri.os, 
+                                  probs = c(0.975))))
+
+write_csv(dat_ref_qol.os, file = "ref_qolibri.os_general.csv")
+```
+
+```{r}
+# preparation for shiny
+ref_qol.os$scale <- "Total score"
+dat_ref_qol.os$scale <- "Total score"
+
+df1 <- bind_rows(ref_qol.os, dat_ref_qol.os)
+
+df1 <- df1 %>%
+    select (sex.kid, age.cluster, scale, everything())
+
+write_csv(df1, file = "references_qolibri_os.csv")
+save(df1, file = "references_qolibri_os.RData")
+```
+
