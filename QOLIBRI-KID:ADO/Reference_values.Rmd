@@ -1,0 +1,301 @@
+---
+title: "05_Reference_values"
+output: html_document
+date: "2023-03-29"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# load packages
+
+```{r}
+library(tidyverse)
+library(dplyr)
+```
+
+# import data
+
+```{r}
+load("data_healthy.RData")
+```
+
+# Reference values
+## total score
+```{r}
+ref_qol_tot<-dat.h %>%
+   dplyr::select(sex.kid, age.cluster, score.total) %>% 
+   group_by(sex.kid, age.cluster) %>%
+   summarize(count = n(),
+             quantiles_0.025 = round(quantile(score.total, 
+                                  probs = c(0.025))),
+             quantiles_0.05 = round(quantile(score.total, 
+                                  probs = c(0.05))),
+             quantiles_0.16 = round(quantile(score.total, 
+                                  probs = c(0.16))),  
+             quantiles_0.30 = round(quantile(score.total, 
+                                  probs = c(0.30))),
+             quantiles_0.40 = round(quantile(score.total, 
+                                  probs = c(0.40))),
+             quantiles_0.50 = round(quantile(score.total, 
+                                  probs = c(0.50))),
+             quantiles_0.60 = round(quantile(score.total, 
+                                  probs = c(0.60))),
+             quantiles_0.70 = round(quantile(score.total, 
+                                  probs = c(0.70))),
+             quantiles_0.85 = round(quantile(score.total, 
+                                  probs = c(0.85))),
+             quantiles_0.95 = round(quantile(score.total, 
+                                  probs = c(0.95))),
+             quantiles_0.975 = round(quantile(score.total, 
+                                  probs = c(0.975))))
+
+write_csv(ref_qol_tot, file = "ref_qol_total_clustered.csv")
+```
+
+
+## cognition
+```{r}
+ref_qol_cog<-dat.h %>%
+   dplyr::select(sex.kid, age.cluster, score.cognition) %>% 
+   group_by(sex.kid, age.cluster) %>%
+   summarize(count = n(),
+             quantiles_0.025 = round(quantile(score.cognition, 
+                                  probs = c(0.025))),
+             quantiles_0.05 = round(quantile(score.cognition, 
+                                  probs = c(0.05))),
+             quantiles_0.16 = round(quantile(score.cognition, 
+                                  probs = c(0.16))),  
+             quantiles_0.30 = round(quantile(score.cognition, 
+                                  probs = c(0.30))),
+             quantiles_0.40 = round(quantile(score.cognition, 
+                                  probs = c(0.40))),
+             quantiles_0.50 = round(quantile(score.cognition, 
+                                  probs = c(0.50))),
+             quantiles_0.60 = round(quantile(score.cognition, 
+                                  probs = c(0.60))),
+             quantiles_0.70 = round(quantile(score.cognition, 
+                                  probs = c(0.70))),
+             quantiles_0.85 = round(quantile(score.cognition, 
+                                  probs = c(0.85))),
+             quantiles_0.95 = round(quantile(score.cognition, 
+                                  probs = c(0.95))),
+             quantiles_0.975 = round(quantile(score.cognition, 
+                                  probs = c(0.975))))
+
+write_csv(ref_qol_cog, file = "ref_qol_cognition_clustered.csv")
+```
+
+## self
+```{r}
+ref_qol_self<-dat.h %>%
+   dplyr::select(sex.kid, age.cluster, score.self) %>% 
+   group_by(sex.kid, age.cluster) %>%
+   summarize(count = n(),
+             quantiles_0.025 = round(quantile(score.self, 
+                                  probs = c(0.025))),
+             quantiles_0.05 = round(quantile(score.self, 
+                                  probs = c(0.05))),
+             quantiles_0.16 = round(quantile(score.self, 
+                                  probs = c(0.16))),  
+             quantiles_0.30 = round(quantile(score.self, 
+                                  probs = c(0.30))),
+             quantiles_0.40 = round(quantile(score.self, 
+                                  probs = c(0.40))),
+             quantiles_0.50 = round(quantile(score.self, 
+                                  probs = c(0.50))),
+             quantiles_0.60 = round(quantile(score.self, 
+                                  probs = c(0.60))),
+             quantiles_0.70 = round(quantile(score.self, 
+                                  probs = c(0.70))),
+             quantiles_0.85 = round(quantile(score.self, 
+                                  probs = c(0.85))),
+             quantiles_0.95 = round(quantile(score.self, 
+                                  probs = c(0.95))),
+             quantiles_0.975 = round(quantile(score.self, 
+                                  probs = c(0.975))))
+
+write_csv(ref_qol_self, file = "ref_qol_self_clustered.csv")
+```
+
+## autonomy
+```{r}
+ref_qol_aut<-dat.h %>%
+   dplyr::select(sex.kid, age.cluster, score.autonomy) %>% 
+   group_by(sex.kid, age.cluster) %>%
+   summarize(count = n(),
+             quantiles_0.025 = round(quantile(score.autonomy, 
+                                  probs = c(0.025))),
+             quantiles_0.05 = round(quantile(score.autonomy, 
+                                  probs = c(0.05))),
+             quantiles_0.16 = round(quantile(score.autonomy, 
+                                  probs = c(0.16))),  
+             quantiles_0.30 = round(quantile(score.autonomy, 
+                                  probs = c(0.30))),
+             quantiles_0.40 = round(quantile(score.autonomy, 
+                                  probs = c(0.40))),
+             quantiles_0.50 = round(quantile(score.autonomy, 
+                                  probs = c(0.50))),
+             quantiles_0.60 = round(quantile(score.autonomy, 
+                                  probs = c(0.60))),
+             quantiles_0.70 = round(quantile(score.autonomy, 
+                                  probs = c(0.70))),
+             quantiles_0.85 = round(quantile(score.autonomy, 
+                                  probs = c(0.85))),
+             quantiles_0.95 = round(quantile(score.autonomy, 
+                                  probs = c(0.95))),
+             quantiles_0.975 = round(quantile(score.autonomy, 
+                                  probs = c(0.975))))
+
+write_csv(ref_qol_aut, file = "ref_qol_autonomy_clustered.csv")
+```
+
+## social
+```{r}
+ref_qol_soc<-dat.h %>%
+   dplyr::select(sex.kid, age.cluster, score.social) %>% 
+   group_by(sex.kid, age.cluster) %>%
+   summarize(count = n(),
+             quantiles_0.025 = round(quantile(score.social, 
+                                  probs = c(0.025))),
+             quantiles_0.05 = round(quantile(score.social, 
+                                  probs = c(0.05))),
+             quantiles_0.16 = round(quantile(score.social, 
+                                  probs = c(0.16))),  
+             quantiles_0.30 = round(quantile(score.social, 
+                                  probs = c(0.30))),
+             quantiles_0.40 = round(quantile(score.social, 
+                                  probs = c(0.40))),
+             quantiles_0.50 = round(quantile(score.social, 
+                                  probs = c(0.50))),
+             quantiles_0.60 = round(quantile(score.social, 
+                                  probs = c(0.60))),
+             quantiles_0.70 = round(quantile(score.social, 
+                                  probs = c(0.70))),
+             quantiles_0.85 = round(quantile(score.social, 
+                                  probs = c(0.85))),
+             quantiles_0.95 = round(quantile(score.social, 
+                                  probs = c(0.95))),
+             quantiles_0.975 = round(quantile(score.social, 
+                                  probs = c(0.975))))
+
+write_csv(ref_qol_soc, file = "ref_qol_social_clustered.csv")
+```
+
+## emotion
+```{r}
+ref_qol_emot<-dat.h %>%
+   dplyr::select(sex.kid, age.cluster, score.emotion) %>% 
+   group_by(sex.kid, age.cluster) %>%
+   summarize(count = n(),
+             quantiles_0.025 = round(quantile(score.emotion, 
+                                  probs = c(0.025))),
+             quantiles_0.05 = round(quantile(score.emotion, 
+                                  probs = c(0.05))),
+             quantiles_0.16 = round(quantile(score.emotion, 
+                                  probs = c(0.16))),  
+             quantiles_0.30 = round(quantile(score.emotion, 
+                                  probs = c(0.30))),
+             quantiles_0.40 = round(quantile(score.emotion, 
+                                  probs = c(0.40))),
+             quantiles_0.50 = round(quantile(score.emotion, 
+                                  probs = c(0.50))),
+             quantiles_0.60 = round(quantile(score.emotion, 
+                                  probs = c(0.60))),
+             quantiles_0.70 = round(quantile(score.emotion, 
+                                  probs = c(0.70))),
+             quantiles_0.85 = round(quantile(score.emotion, 
+                                  probs = c(0.85))),
+             quantiles_0.95 = round(quantile(score.emotion, 
+                                  probs = c(0.95))),
+             quantiles_0.975 = round(quantile(score.emotion, 
+                                  probs = c(0.975))))
+
+write_csv(ref_qol_emot, file = "ref_qol_emotion_clustered.csv")
+```
+
+## physical
+```{r}
+ref_qol_phy<-dat.h %>%
+   dplyr::select(sex.kid, age.cluster, score.physical) %>% 
+   group_by(sex.kid, age.cluster) %>%
+   summarize(count = n(),
+             quantiles_0.025 = round(quantile(score.physical, 
+                                  probs = c(0.025))),
+             quantiles_0.05 = round(quantile(score.physical, 
+                                  probs = c(0.05))),
+             quantiles_0.16 = round(quantile(score.physical, 
+                                  probs = c(0.16))),  
+             quantiles_0.30 = round(quantile(score.physical, 
+                                  probs = c(0.30))),
+             quantiles_0.40 = round(quantile(score.physical, 
+                                  probs = c(0.40))),
+             quantiles_0.50 = round(quantile(score.physical, 
+                                  probs = c(0.50))),
+             quantiles_0.60 = round(quantile(score.physical, 
+                                  probs = c(0.60))),
+             quantiles_0.70 = round(quantile(score.physical, 
+                                  probs = c(0.70))),
+             quantiles_0.85 = round(quantile(score.physical, 
+                                  probs = c(0.85))),
+             quantiles_0.95 = round(quantile(score.physical, 
+                                  probs = c(0.95))),
+             quantiles_0.975 = round(quantile(score.physical, 
+                                  probs = c(0.975))))
+
+write_csv(ref_qol_phy, file = "ref_qol_physical_clustered.csv")
+```
+
+## general score without constraints
+```{r}
+dat_ref_qol<-dat.h %>%
+   dplyr::select(score.total) %>%
+   summarize(count = n(),
+             quantiles_0.025 = round(quantile(score.total, 
+                                  probs = c(0.025))),
+             quantiles_0.05 = round(quantile(score.total, 
+                                  probs = c(0.05))),
+             quantiles_0.16 = round(quantile(score.total, 
+                                  probs = c(0.16))),  
+             quantiles_0.30 = round(quantile(score.total, 
+                                  probs = c(0.30))),
+             quantiles_0.40 = round(quantile(score.total, 
+                                  probs = c(0.40))),
+             quantiles_0.50 = round(quantile(score.total, 
+                                  probs = c(0.50))),
+             quantiles_0.60 = round(quantile(score.total, 
+                                  probs = c(0.60))),
+             quantiles_0.70 = round(quantile(score.total, 
+                                  probs = c(0.70))),
+             quantiles_0.85 = round(quantile(score.total, 
+                                  probs = c(0.85))),
+             quantiles_0.95 = round(quantile(score.total, 
+                                  probs = c(0.95))),
+             quantiles_0.975 = round(quantile(score.total, 
+                                  probs = c(0.975))))
+
+write_csv(dat_ref_qol, file = "ref_qol_general.csv")
+```
+
+```{r}
+# preparation for shiny
+ref_qol_tot$scale <- "Total score"
+ref_qol_cog$scale <- "Cognition"
+ref_qol_self$scale <- "Self"
+ref_qol_aut$scale <- "Autonomy"
+ref_qol_soc$scale <- "Social"
+ref_qol_emot$scale <- "Emotional"
+ref_qol_phy$scale <- "Physical"
+dat_ref_qol$scale <- "Total score"
+
+df <- bind_rows(ref_qol_tot, ref_qol_cog, ref_qol_self, ref_qol_aut, ref_qol_soc,
+                ref_qol_emot, ref_qol_phy, dat_ref_qol)
+
+df <- df %>%
+   select (sex.kid, age.cluster, scale, everything())
+
+write_csv(df, file = "references_qolibri.csv")
+save(df, file = "references_qolibri.RData")
+```
+

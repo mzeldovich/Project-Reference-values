@@ -1,0 +1,71 @@
+---
+title: "02_CFA"
+output: html_document
+date: "2023-03-29"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+# load packages
+
+```{r}
+library(tidyverse)
+library(dplyr)
+library(lavaan)
+```
+
+
+# import data
+
+```{r}
+load("data_final.RData")
+```
+
+
+# cfa model
+
+```{r}
+qol.model <-' # measurement model
+                  cognition =~ A1 + A2 + A3 + A4 + A5 + A6 + A7
+                       self =~ B1 + B2 + B3 + B4 + B5
+                   autonomy =~ C1 + C2 + C3 + C4 + C5 + C6 + C7
+                     social =~ D1 + D2 + D3 + D4 + D5 + D6
+                    emotion =~ E1 + E2 + E3 + E4
+                   physical =~ F1 + F2 + F3 + F4 + F5 + F6
+            '
+```
+
+# cfa
+
+```{r}
+fit1 <- cfa(qol.model, data = dat.f, ordered = TRUE, std.lv = TRUE)
+summary(fit1, fit.measures = TRUE, standardized = TRUE)
+
+fitmeasures(fit1, c("chisq.scaled", "df.scaled", "pvalue.scaled", "cfi.scaled","tli.scaled",
+                    "rmsea.scaled", "rmsea.ci.lower.scaled", "rmsea.ci.upper.scaled", "srmr"))
+# good model fit
+fitmeasures(fit1, "chisq.scaled")/fitmeasures(fit1, "df.scaled")
+```
+
+# loadings
+
+```{r}
+loadings1<-as.data.frame(standardizedSolution(fit1)) %>% 
+  filter(op=="=~"); loadings1
+
+write_csv(loadings1, file = "Intercorrelations_QOLIBRI-KA.csv")
+save(loadings1, file = "Intercorrelations_QOLIBRI-KA.RData")
+```
+
+# co-variances
+
+```{r}
+variances1<-as.data.frame(standardizedSolution(fit1)) %>% 
+  filter(op=="~~"); variances1
+
+write_csv(variances1, file = "Co-Variances_QOLIBRI-KA.csv")
+save(variances1, file = "Co-Variances_QOLIBRI-KA.RData")
+```
