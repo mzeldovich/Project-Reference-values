@@ -1,0 +1,228 @@
+---
+title: "05_MI"
+output: html_document
+date: "2023-08-23"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# load packages
+
+```{r}
+library(tidyverse)
+library(lavaan)
+library(semTools)
+```
+
+# import data
+```{r}
+# tbi
+tbi0<-read_csv2("FinalStudy_Leonie_20230822.csv")
+```
+
+```{r}
+# healthy
+load("data_final.Rdata")
+```
+
+## preparation of tbi-data
+```{r}
+# subset
+tbi0<-tbi0 %>% 
+  dplyr::select(id, agecat, contains("QOL"))
+
+# renaming
+colnames(tbi0)<-gsub("QOL_","",colnames(tbi0))
+colnames(tbi0)<-gsub("_0","",colnames(tbi0))
+
+tbi0<-rename(tbi0, age.cluster="agecat")
+
+# recoding
+tbi0$age.cluster <- car::recode(tbi0$age.cluster, "2=1; 3=2")
+
+# back-up data
+tbi1<-tbi0
+```
+
+## merge tbi & healthy
+```{r}
+# subsetting
+bet<-dat.f %>% 
+  dplyr::select(id, age.cluster, A1:OS6)
+
+# add identifications
+bet$tbi<-1
+tbi1$tbi<-2
+
+bet$age.cluster<-as.numeric(bet$age.cluster)
+
+# merging
+tbi.qol<-bind_rows(bet, tbi1)
+```
+
+# response patterns
+```{r}
+library(table1)
+
+tbi1$age.cluster <-
+  factor(tbi1$age.cluster,
+         levels = c(1, 2),
+         labels = c("Children", "Adolescents"))
+
+table1(~ factor(OS1) + factor(OS2) + factor(OS3) + factor(OS4) + factor(OS5) + factor(OS6) | age.cluster, data = tbi1)
+```
+
+# cfa model
+```{r}
+os.model <- ' # measurement model
+                hrQoL =~ OS1 + OS2 + OS3 + OS4 + OS5 + OS6
+            '
+```
+
+# cfa tbi
+```{r}
+fit.tbi.o <- cfa(os.model, data = tbi1, ordered = TRUE, std.lv = TRUE)
+summary(fit.tbi.o, fit.measures = TRUE, standardized = TRUE)
+fitmeasures(fit.tbi.o, c("chisq.scaled","df.scaled", "cfi.scaled", "tli.scaled",
+                                "rmsea.scaled", "rmsea.ci.lower.scaled",
+                                "rmsea.ci.upper.scaled", "srmr"))
+# good model fit (except upper rmsea)
+fitmeasures(fit.tbi.o, "chisq.scaled")/fitmeasures(fit.tbi.o, "df.scaled")
+```
+
+# cfa healthy
+```{r}
+fit.tbi.h <- cfa(os.model, data = dat.f, ordered = TRUE, std.lv = TRUE)
+summary(fit.tbi.h, fit.measures = TRUE, standardized = TRUE)
+fitmeasures(fit.tbi.h, c("chisq.scaled","df.scaled", "cfi.scaled", "tli.scaled",
+                                "rmsea.scaled", "rmsea.ci.lower.scaled",
+                                "rmsea.ci.upper.scaled", "srmr"))
+# good model fit (except upper rmsea)
+fitmeasures(fit.tbi.h, "chisq.scaled")/fitmeasures(fit.tbi.h, "df.scaled")
+```
+
+# cfa mixed
+```{r}
+fit.tbi.mix <- cfa(os.model, data = tbi.qol, ordered = TRUE, std.lv = TRUE)
+summary(fit.tbi.mix, fit.measures = TRUE, standardized = TRUE)
+fitmeasures(fit.tbi.mix, c("chisq.scaled","df.scaled", "cfi.scaled", "tli.scaled",
+                                "rmsea.scaled", "rmsea.ci.lower.scaled",
+                                "rmsea.ci.upper.scaled", "srmr"))
+# good model fit (except upper rmsea)
+fitmeasures(fit.tbi.mix, "chisq.scaled")/fitmeasures(fit.tbi.mix, "df.scaled")
+```
+
+# MI
+## baseline
+```{r}
+# preparing a matrix for results
+all.results.os<-matrix(NA, nrow = 3, ncol = 9)
+colnames(all.results.os)<-c("chisq.scaled", "df.scaled", "pvalue.scaled", "rmsea.scaled",
+                            "rmsea.ci.lower.scaled","rmsea.ci.upper.scaled", "cfi.scaled",
+                            "tli.scaled", "srmr")
+
+# baseline model
+baseline <- measEq.syntax(configural.model = os.model,
+                           data = tbi.qol,
+                           ordered = c("OS1", "OS2", "OS3", "OS4", "OS5", "OS6"),
+                           parameterization = "delta", ID.fac = "std.lv",
+                           ID.cat = "Wu.Estabrook.2016", group = "tbi",
+                           group.equal = "configural")
+
+summary(baseline)
+
+# constraints
+cat(as.character(baseline))
+
+# as.character to submit to lavaan
+model.baseline <- as.character(baseline)
+
+# Fitting baseline model in lavaan via cfa function
+fit.baseline <- cfa(model.baseline, data = tbi.qol, group = "tbi",
+                    ordered = c("OS1", "OS2", "OS3", "OS4", "OS5", "OS6"), std.lv = TRUE)
+
+# results
+summary(fit.baseline)
+
+# adding results to matrix
+all.results.os[1,]<-round(data.matrix(fitmeasures(fit.baseline,
+                                                  fit.measures = c("chisq.scaled", "df.scaled", 
+                                                                   "pvalue.scaled", "rmsea.scaled",
+                                                                   "rmsea.ci.lower.scaled",
+                                                                   "rmsea.ci.upper.scaled",
+                                                                   "cfi.scaled","tli.scaled", "srmr"))),
+                       digits=3)
+
+fitmeasures(fit.baseline, "chisq.scaled")/fitmeasures(fit.baseline, "df.scaled")
+```
+
+## thresholds
+```{r}
+# thresholds model
+prop4b <- measEq.syntax(configural.model = os.model,
+                        data = tbi.qol,
+                        ordered = c("OS1", "OS2", "OS3", "OS4", "OS5", "OS6"),
+                        parameterization = "delta", ID.fac = "std.lv",
+                        ID.cat = "Wu.Estabrook.2016", group = "tbi",
+                        group.equal = c("thresholds"))
+
+model.prop4b <- as.character(prop4b)
+
+# fitting into lavaan
+fit.prop4b <- cfa(model.prop4b, data = tbi.qol, group = "tbi",
+                  ordered = c("OS1", "OS2", "OS3", "OS4", "OS5", "OS6"), std.lv = TRUE)
+
+# results
+summary(fit.prop4b)
+
+# adding results to matrix
+all.results.os[2,]<-round(data.matrix(fitmeasures(fit.prop4b,
+                                                  fit.measures = c("chisq.scaled", "df.scaled", 
+                                                                   "pvalue.scaled", "rmsea.scaled",
+                                                                   "rmsea.ci.lower.scaled",
+                                                                   "rmsea.ci.upper.scaled",
+                                                                   "cfi.scaled","tli.scaled", "srmr"))),
+                       digits=3)
+
+fitmeasures(fit.prop4b, "chisq.scaled")/fitmeasures(fit.prop4b, "df.scaled")
+
+# comparing the models
+lavTestLRT(fit.baseline,fit.prop4b) # non significant
+```
+
+## thresholds and loadings
+```{r}
+# thresholds and loading model
+prop7b <- measEq.syntax(configural.model = os.model,
+                        data = tbi.qol,
+                        ordered = c("OS1", "OS2", "OS3", "OS4", "OS5", "OS6"),
+                        parameterization = "delta", ID.fac = "std.lv",
+                        ID.cat = "Wu.Estabrook.2016", group = "tbi",
+                        group.equal = c("thresholds", "loadings"))
+
+model.prop7b <- as.character(prop7b)
+
+# fitting into lavaan
+fit.prop7b <- cfa(model.prop7b, data = tbi.qol, group = "tbi",
+                  ordered = c("OS1", "OS2", "OS3", "OS4", "OS5", "OS6"), std.lv = TRUE)
+
+# results
+summary(fit.prop7b)
+
+# adding results to matrix
+all.results.os[3,]<-round(data.matrix(fitmeasures(fit.prop7b,
+                                                  fit.measures = c("chisq.scaled", "df.scaled", 
+                                                                   "pvalue.scaled", "rmsea.scaled",
+                                                                   "rmsea.ci.lower.scaled",
+                                                                   "rmsea.ci.upper.scaled",
+                                                                   "cfi.scaled","tli.scaled", "srmr"))),
+                       digits=3)
+
+fitmeasures(fit.prop7b, "chisq.scaled")/fitmeasures(fit.prop7b, "df.scaled")
+
+# comparing the models
+lavTestLRT(fit.prop4b, fit.prop7b) # non significant
+```
+
