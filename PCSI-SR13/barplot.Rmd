@@ -1,0 +1,132 @@
+---
+title: "09_barplot"
+output: html_document
+date: "2023-06-30"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# packages
+```{r}
+library(tidyverse)
+library(dplyr)
+```
+
+# import data
+```{r}
+load("PCSI-SR13_TBI_imputed.Rdata")
+```
+
+```{r}
+load("data_final.RData")
+```
+
+```{r}
+dat.f = dat.f %>%
+  filter(., age.cluster == c("Adolescents"))
+```
+
+```{r}
+Sady <- c(0.73, 0.21, 0.24, 0.37, 0.23, 0.46, 0.42, 0.31, # physical
+          0.33, 0.18, 0.21, 0.20, # emotional
+          0.42, 0.58, 0.49, 0.60, 0.63, 0.43, # cognitive
+          0.60, 0.55, 0.32) # fatigue
+
+# 13-18 years!
+```
+
+# auxiliary variables
+```{r}
+items.physical <- c("Headache", "Nausea", "Balance problems", "Dizziness",
+                    "Visual problems \n(double vision, blurring)",
+                    "Move in a clumsy manner", "Sensitivity to light", "Sensitivity to noise")
+
+items.emotional <- c("Irritability", "Sadness", "Nervousness", "Feeling more emotional")
+
+items.cognitive <- c("Feeling mentally foggy", "Difficulty concentrating",
+                     "Difficulty remembering", "Get confused with \ndirections or tasks",
+                     "Answers questions more \nslowly than usual", "Feeling slowed down")
+
+items.fatigue <- c("Fatigue", "Drowsiness", "Sleeping more than usual")
+
+items.all <- c(items.physical, items.emotional, items.cognitive, items.fatigue)
+```
+
+# relative frequencies
+## healthy
+```{r}
+dat <- subset(dat.f, select = c(pcsisr1301:pcsisr1321))
+```
+
+```{r}
+freq12 <- function (x) {
+  ifelse (x == 1 | x == 2 | x == 3 | x == 4 | x == 5 | x == 6, 1, 0)
+}
+
+dat <- apply(dat, 2, freq12)
+```
+
+```{r}
+dat2 <- dat
+```
+
+```{r}
+healthy <- colSums(dat2)/950
+healthy <- round(healthy, digits = 2)
+```
+
+## tbi
+```{r}
+dat.tbi <- subset(tbi13.1, select = c(pcsisr1301:pcsisr1321))
+```
+
+```{r}
+dat.tbi <- apply(dat.tbi, 2, freq12)
+```
+
+```{r}
+dat.tbi2 <- dat.tbi
+```
+
+```{r}
+tbi <- colSums(dat.tbi2)/125
+tbi <- round(tbi, digits = 2)
+```
+
+# dataframe
+```{r}
+rel.freq <- cbind.data.frame(items.all, tbi, healthy, Sady)
+rel.freq.re <- rel.freq %>% 
+  gather(tbi:Sady, key = sample, value = percentage)
+```
+
+# plot
+```{r}
+library(ggplot2)
+library(Hmisc)
+```
+
+## barplot
+```{r}
+(plot2 <- ggplot(rel.freq.re, aes(x = items.all, y = percentage, group = sample, fill = sample)) +
+   geom_col(width = 0.5, position = position_dodge(0.7)) +
+   labs(x = "PCSI-SR13 Items", y = "% of PCS rated at least '1'",
+        title = "Comparison of the post-concussion symptoms", fill = "Sample") +
+   theme_classic() +
+   scale_x_discrete(limits = items.all) +
+   scale_y_continuous(limits = c(0,1), labels = c("0%", "25%", "50%", "75%", "100%")) +
+   theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1),
+         legend.position = c(0.5, 0.95), legend.direction = "horizontal") +
+   scale_fill_manual(values = c("#95D840","#287D8E","#404788"),
+                     labels = c("TBI sample",
+                                "General population \nsample",
+                                "Mild TBI sample \n(Sady et al., 2014)"))
+ )
+
+ggsave("barplot.png", plot2, dpi = 300, width = 13, height = 6)
+ggsave("Figure2.tiff", plot2, width = 13, height = 5, dpi = 400)
+
+```
+

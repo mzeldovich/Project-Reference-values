@@ -1,0 +1,205 @@
+---
+title: "08_Reference_values"
+output: html_document
+date: "2023-03-29"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# load packages
+
+```{r}
+library(tidyverse)
+library(dplyr)
+```
+
+# import data
+
+```{r}
+load("data_healthy.RData")
+```
+
+```{r}
+dat.h = dat.h %>%
+  filter(., age.cluster == c("Adolescents"))
+```
+
+# Reference values
+## total score
+
+```{r}
+ref_pcsisr13.tot<-dat.h %>%
+   dplyr::select(sex.kid, age.kid, pcsisr13.total) %>% 
+   summarize(count = n(),
+             quantiles_0.025 = round(quantile(pcsisr13.total, 
+                                  probs = c(0.025), na.rm=TRUE)),
+             quantiles_0.05 = round(quantile(pcsisr13.total, 
+                                  probs = c(0.05), na.rm=TRUE)),
+             quantiles_0.16 = round(quantile(pcsisr13.total, 
+                                  probs = c(0.16), na.rm=TRUE)),  
+             quantiles_0.30 = round(quantile(pcsisr13.total, 
+                                  probs = c(0.30), na.rm=TRUE)),
+             quantiles_0.40 = round(quantile(pcsisr13.total, 
+                                  probs = c(0.40), na.rm=TRUE)),
+             quantiles_0.50 = round(quantile(pcsisr13.total, 
+                                  probs = c(0.50), na.rm=TRUE)),
+             quantiles_0.60 = round(quantile(pcsisr13.total, 
+                                  probs = c(0.60), na.rm=TRUE)),
+             quantiles_0.70 = round(quantile(pcsisr13.total, 
+                                  probs = c(0.70), na.rm=TRUE)),
+             quantiles_0.85 = round(quantile(pcsisr13.total, 
+                                  probs = c(0.85), na.rm=TRUE)),
+             quantiles_0.95 = round(quantile(pcsisr13.total, 
+                                  probs = c(0.95), na.rm=TRUE)),
+             quantiles_0.975 = round(quantile(pcsisr13.total, 
+                                  probs = c(0.975), na.rm=TRUE)))
+
+write_csv(ref_pcsisr13.tot, file = "ref_pcsisr13.total.csv")
+```
+
+## physical
+
+```{r}
+ref_pcsisr13.phys<-dat.h %>%
+   dplyr::select(sex.kid, age.kid, pcsisr13.physical) %>% 
+   summarize(count = n(),
+             quantiles_0.025 = round(quantile(pcsisr13.physical, 
+                                  probs = c(0.025), na.rm=TRUE)),
+             quantiles_0.05 = round(quantile(pcsisr13.physical, 
+                                  probs = c(0.05), na.rm=TRUE)),
+             quantiles_0.16 = round(quantile(pcsisr13.physical, 
+                                  probs = c(0.16), na.rm=TRUE)),  
+             quantiles_0.30 = round(quantile(pcsisr13.physical, 
+                                  probs = c(0.30), na.rm=TRUE)),
+             quantiles_0.40 = round(quantile(pcsisr13.physical, 
+                                  probs = c(0.40), na.rm=TRUE)),
+             quantiles_0.50 = round(quantile(pcsisr13.physical, 
+                                  probs = c(0.50), na.rm=TRUE)),
+             quantiles_0.60 = round(quantile(pcsisr13.physical, 
+                                  probs = c(0.60), na.rm=TRUE)),
+             quantiles_0.70 = round(quantile(pcsisr13.physical, 
+                                  probs = c(0.70), na.rm=TRUE)),
+             quantiles_0.85 = round(quantile(pcsisr13.physical, 
+                                  probs = c(0.85), na.rm=TRUE)),
+             quantiles_0.95 = round(quantile(pcsisr13.physical, 
+                                  probs = c(0.95), na.rm=TRUE)),
+             quantiles_0.975 = round(quantile(pcsisr13.physical, 
+                                  probs = c(0.975), na.rm=TRUE)))
+
+write_csv(ref_pcsisr13.phys, file = "ref_pcsisr13.physical.csv")
+```
+
+## emotional
+
+```{r}
+ref_pcsisr13.emot<-dat.h %>%
+   dplyr::select(sex.kid, age.kid, pcsisr13.emotional) %>% 
+   summarize(count = n(),
+             quantiles_0.025 = round(quantile(pcsisr13.emotional, 
+                                  probs = c(0.025), na.rm=TRUE)),
+             quantiles_0.05 = round(quantile(pcsisr13.emotional, 
+                                  probs = c(0.05), na.rm=TRUE)),
+             quantiles_0.16 = round(quantile(pcsisr13.emotional, 
+                                  probs = c(0.16), na.rm=TRUE)),  
+             quantiles_0.30 = round(quantile(pcsisr13.emotional, 
+                                  probs = c(0.30), na.rm=TRUE)),
+             quantiles_0.40 = round(quantile(pcsisr13.emotional, 
+                                  probs = c(0.40), na.rm=TRUE)),
+             quantiles_0.50 = round(quantile(pcsisr13.emotional, 
+                                  probs = c(0.50), na.rm=TRUE)),
+             quantiles_0.60 = round(quantile(pcsisr13.emotional, 
+                                  probs = c(0.60), na.rm=TRUE)),
+             quantiles_0.70 = round(quantile(pcsisr13.emotional, 
+                                  probs = c(0.70), na.rm=TRUE)),
+             quantiles_0.85 = round(quantile(pcsisr13.emotional, 
+                                  probs = c(0.85), na.rm=TRUE)),
+             quantiles_0.95 = round(quantile(pcsisr13.emotional, 
+                                  probs = c(0.95), na.rm=TRUE)),
+             quantiles_0.975 = round(quantile(pcsisr13.emotional, 
+                                  probs = c(0.975), na.rm=TRUE)))
+
+write_csv(ref_pcsisr13.emot, file = "ref_pcsisr13.emotional.csv")
+```
+
+## cognitive
+
+```{r}
+ref_pcsisr13.cog<-dat.h %>%
+   dplyr::select(sex.kid, age.kid, pcsisr13.cognitive) %>% 
+   summarize(count = n(),
+             quantiles_0.025 = round(quantile(pcsisr13.cognitive, 
+                                  probs = c(0.025), na.rm=TRUE)),
+             quantiles_0.05 = round(quantile(pcsisr13.cognitive, 
+                                  probs = c(0.05), na.rm=TRUE)),
+             quantiles_0.16 = round(quantile(pcsisr13.cognitive, 
+                                  probs = c(0.16), na.rm=TRUE)),  
+             quantiles_0.30 = round(quantile(pcsisr13.cognitive, 
+                                  probs = c(0.30), na.rm=TRUE)),
+             quantiles_0.40 = round(quantile(pcsisr13.cognitive, 
+                                  probs = c(0.40), na.rm=TRUE)),
+             quantiles_0.50 = round(quantile(pcsisr13.cognitive, 
+                                  probs = c(0.50), na.rm=TRUE)),
+             quantiles_0.60 = round(quantile(pcsisr13.cognitive, 
+                                  probs = c(0.60), na.rm=TRUE)),
+             quantiles_0.70 = round(quantile(pcsisr13.cognitive, 
+                                  probs = c(0.70), na.rm=TRUE)),
+             quantiles_0.85 = round(quantile(pcsisr13.cognitive, 
+                                  probs = c(0.85), na.rm=TRUE)),
+             quantiles_0.95 = round(quantile(pcsisr13.cognitive, 
+                                  probs = c(0.95), na.rm=TRUE)),
+             quantiles_0.975 = round(quantile(pcsisr13.cognitive, 
+                                  probs = c(0.975), na.rm=TRUE)))
+
+write_csv(ref_pcsisr13.cog, file = "ref_pcsisr13.cognitive.csv")
+```
+
+## fatigue
+```{r}
+ref_pcsisr13.fat<-dat.h %>%
+   dplyr::select(sex.kid, age.kid, pcsisr13.fatigue) %>% 
+   summarize(count = n(),
+             quantiles_0.025 = round(quantile(pcsisr13.fatigue, 
+                                  probs = c(0.025), na.rm=TRUE)),
+             quantiles_0.05 = round(quantile(pcsisr13.fatigue, 
+                                  probs = c(0.05), na.rm=TRUE)),
+             quantiles_0.16 = round(quantile(pcsisr13.fatigue, 
+                                  probs = c(0.16), na.rm=TRUE)),  
+             quantiles_0.30 = round(quantile(pcsisr13.fatigue, 
+                                  probs = c(0.30), na.rm=TRUE)),
+             quantiles_0.40 = round(quantile(pcsisr13.fatigue, 
+                                  probs = c(0.40), na.rm=TRUE)),
+             quantiles_0.50 = round(quantile(pcsisr13.fatigue, 
+                                  probs = c(0.50), na.rm=TRUE)),
+             quantiles_0.60 = round(quantile(pcsisr13.fatigue, 
+                                  probs = c(0.60), na.rm=TRUE)),
+             quantiles_0.70 = round(quantile(pcsisr13.fatigue, 
+                                  probs = c(0.70), na.rm=TRUE)),
+             quantiles_0.85 = round(quantile(pcsisr13.fatigue, 
+                                  probs = c(0.85), na.rm=TRUE)),
+             quantiles_0.95 = round(quantile(pcsisr13.fatigue, 
+                                  probs = c(0.95), na.rm=TRUE)),
+             quantiles_0.975 = round(quantile(pcsisr13.fatigue, 
+                                  probs = c(0.975), na.rm=TRUE)))
+
+write_csv(ref_pcsisr13.fat, file = "ref_pcsisr13.fatigue.csv")
+```
+
+```{r}
+# preparation for shiny
+ref_pcsisr13.tot$scale <- "Total score"
+ref_pcsisr13.phys$scale <- "Physical"
+ref_pcsisr13.emot$scale <- "Emotional"
+ref_pcsisr13.cog$scale <- "Cognition"
+ref_pcsisr13.fat$scale <- "Fatigue"
+
+df3 <- bind_rows(ref_pcsisr13.phys, ref_pcsisr13.emot, ref_pcsisr13.cog, ref_pcsisr13.fat, ref_pcsisr13.tot)
+
+df3 <- df3 %>%
+    select (scale, everything())
+
+write_csv(df3, file = "references_pcsisr13.csv")
+save(df3, file = "references_pcsisr13.RData")
+```
+

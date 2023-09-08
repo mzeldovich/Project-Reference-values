@@ -1,0 +1,711 @@
+---
+title: "07C_MI_metric_imputiert"
+output: html_document
+date: "2023-03-29"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# load packages
+
+```{r}
+library(tidyverse)
+library(lavaan)
+library(semTools)
+library(dplyr)
+library(haven)
+library(Hmisc)
+```
+
+# import data
+```{r}
+tbi13<-read_sav("Datensatz_3_Masterarbeit_DT_22_23.sav")
+load("data_final.Rdata")
+```
+
+## preparation of tbi-data
+```{r}
+# back-up data
+tbi13.1<-tbi13
+```
+
+```{r}
+# removing unnecessary columns
+tbi13.1<-subset(tbi13.1) %>% 
+  dplyr::select(-ends_with("prae")) %>% 
+  dplyr::select(-contains("RAPID")) %>% 
+  dplyr::select(-c("Laufende_Nummer", "Zentrum", "TestdatumJ", "TestdatumE", "Schweregrad", "KOSCHI",
+                   "BesVer_Mutter", "BesVer_Vater", "stationary", "ambulatory", "direct",
+                   "indirect", "multilingual", "Testdatum.Untersucher")) %>% 
+  dplyr::select(-contains("SHT")) %>% 
+  dplyr::select(-ends_with("tri")) %>% 
+  dplyr::select(-starts_with("Low")) %>% 
+  dplyr::select(-starts_with("U")) %>%
+  dplyr::select(-starts_with("High")) %>%
+  dplyr::select(-starts_with("frontal")) %>%
+  dplyr::select(-starts_with("temporal")) %>% 
+  dplyr::select(-starts_with("parietal")) %>% 
+  dplyr::select(-starts_with("occipital")) %>% 
+  dplyr::select(-contains("Rating")) %>% 
+  dplyr::select(-contains("Source")) %>% 
+  dplyr::select(-contains("Bogen")) %>% 
+  dplyr::select(-contains("SoDe")) %>% 
+  dplyr::select(-contains("P_post")) %>% 
+  dplyr::select(-contains("RPQ")) %>% 
+  dplyr::select(-contains("Spalte")) %>%
+  dplyr::select(-contains("insgesamt")) %>%
+  dplyr::select(-contains("Gesamt"))
+```
+
+```{r}
+# renaming
+tbi13.1<-rename(tbi13.1, id="ID", sex.kid="GenderJ", age.kid="AlterJ",
+                age.cluster="Altersgruppe", education.mum="BildAb_Mutter",
+                education.dad="BildAb_Vater", fam.situation="FamSit",
+                pcsisr1301="Item1_phy_J_post",
+                pcsisr1302="Item2_phy_J_post",
+                pcsisr1303="Item3_phy_J_post",
+                pcsisr1304="Item4_phy_J_post",
+                pcsisr1305="Item5_phy_J_post",
+                pcsisr1306="Item6_phy_J_post",
+                pcsisr1307="Item7_phy_J_post",
+                pcsisr1308="Item8_phy_J_post",
+                pcsisr1309="Item9_em_J_post",
+                pcsisr1310="Item10_em_J_post",
+                pcsisr1311="Item11_em_J_post",
+                pcsisr1312="Item12_em_J_post",
+                pcsisr1313="Item13_kog_J_post",
+                pcsisr1314="Item14_kog_J_post",
+                pcsisr1315="Item15_kog_J_post",
+                pcsisr1316="Item16_kog_J_post",
+                pcsisr1317="Item17_kog_J_post",
+                pcsisr1318="Item18_kog_J_post",
+                pcsisr1319="Item19_fat_J_post",
+                pcsisr1320="Item20_fat_J_post",
+                pcsisr1321="Item21_fat_J_post",
+                age.fam="AlterdesElternteils", submitdate="Testdatum2")
+```
+
+```{r}
+# rounding age to integer
+tbi13.1$age.kid<-signif(tbi13.1$age.kid, digits = 2)
+```
+
+# auxiliary variable
+
+```{r}
+items.pcsi13 <- paste("pcsisr13", c("01", "02", "03", "04", "05", "06", "07", "08", "09", "10",
+                                    "11", "12", "13", "14", "15", "16", "17", "18", "19", "20",
+                                    "21"), sep = "")
+
+physical.13 <- c("pcsisr1301", "pcsisr1302", "pcsisr1303", 
+                "pcsisr1304", "pcsisr1305", "pcsisr1306", 
+                "pcsisr1307","pcsisr1308")
+
+emotional.13 <- c("pcsisr1309", "pcsisr1310", "pcsisr1311", "pcsisr1312")
+
+cognitive.13 <- c("pcsisr1313", "pcsisr1314", "pcsisr1315", "pcsisr1316",
+                  "pcsisr1317", "pcsisr1318")
+
+fatigue.13 <- c("pcsisr1319", "pcsisr1320", "pcsisr1321")
+```
+
+
+```{r}
+tbi13.1$missings = apply(tbi13.1, 1, function(x){sum(is.na(x))}) 
+```
+
+```{r}
+table(tbi13.1$missings)
+```
+
+# Replace missing values with mean of the remaining items for tbi-data
+
+```{r}
+tbi13.1[,physical.13] <- impute(tbi13.1[,physical.13], mean)
+tbi13.1[,emotional.13] <- impute(tbi13.1[,emotional.13], mean)
+tbi13.1[,cognitive.13] <- impute(tbi13.1[,cognitive.13], mean)
+tbi13.1[,fatigue.13] <- impute(tbi13.1[,fatigue.13], mean)
+```
+
+## Scales
+
+```{r}
+tbi13.1$pcsisr13.physical = apply(tbi13.1[physical.13],1,sum)
+tbi13.1$pcsisr13.emotional = apply(tbi13.1[emotional.13],1,sum)
+tbi13.1$pcsisr13.cognitive = apply(tbi13.1[cognitive.13],1,sum)
+tbi13.1$pcsisr13.fatigue = apply(tbi13.1[fatigue.13],1,sum)
+tbi13.1$pcsisr13.total = apply(tbi13.1[items.pcsi13],1,sum)
+```
+
+```{r}
+library(table1)
+
+table1(~pcsisr1301 + pcsisr1302 + pcsisr1303 + pcsisr1304 + pcsisr1305 +
+         pcsisr1306 + pcsisr1307 + pcsisr1308 +
+       pcsisr1309 + pcsisr1310 + pcsisr1311 + pcsisr1312 +
+       pcsisr1313 + pcsisr1314 + pcsisr1315 + pcsisr1316 + pcsisr1317 +
+         pcsisr1318 + pcsisr1319 + pcsisr1320 + pcsisr1321, data = tbi13.1)
+```
+
+# data
+## original data (0-6)
+
+```{r}
+# tbi
+tbi13.2<-tbi13.1
+```
+
+```{r}
+# healthy
+dat.h2<-dat.f
+```
+
+# merge tbi & healthy
+## original data
+```{r}
+# subsetting
+bet<-dat.h2 %>%
+  dplyr::select(id, age.cluster, pcsisr1301:pcsisr1321)
+
+# add identifications
+bet$tbi<-1
+tbi13.2$tbi<-2
+
+bet$age.cluster<-as.numeric(bet$age.cluster)
+
+# merging
+tbi.pcsisr13<-bind_rows(bet, tbi13.2)
+```
+
+# cfa model
+
+```{r}
+teen.model <- ' # measurement model
+                    physical =~ pcsisr1301 + pcsisr1302 + pcsisr1303 + pcsisr1304 + pcsisr1305 +
+                                pcsisr1306 + pcsisr1307 + pcsisr1308
+                   emotional =~ pcsisr1309 + pcsisr1310 + pcsisr1311 + pcsisr1312
+                   cognitive =~ pcsisr1313 + pcsisr1314 + pcsisr1315 + pcsisr1316 + pcsisr1317 +
+                                pcsisr1318
+                     fatigue =~ pcsisr1319 + pcsisr1320 + pcsisr1321
+              '
+```
+
+# cfa tbi
+## original data
+```{r}
+fit1 <- cfa(teen.model, data = tbi13.2, std.lv = TRUE)
+summary(fit1, fit.measures = TRUE, standardized = TRUE)
+fitmeasures(fit1, c("chisq","df", "pvalue", "cfi", "tli","rmsea", "rmsea.ci.lower", "rmsea.ci.upper", "srmr"))
+fitmeasures(fit1, "chisq")/fitmeasures(fit1, "df")
+```
+
+# cfa healthy
+## original data
+```{r}
+fit3 <- cfa(teen.model, data = dat.h2, std.lv = TRUE)
+summary(fit3, fit.measures = TRUE, standardized = TRUE)
+fitmeasures(fit3, c("chisq","df", "pvalue", "cfi", "tli","rmsea", "rmsea.ci.lower", "rmsea.ci.upper", "srmr"))
+fitmeasures(fit3, "chisq")/fitmeasures(fit3, "df")
+```
+
+# cfa mixed
+## original data
+```{r}
+fit5 <- cfa(teen.model, data = tbi.pcsisr13, std.lv = TRUE)
+summary(fit5, fit.measures = TRUE, standardized = TRUE)
+fitmeasures(fit5, c("chisq","df", "pvalue", "cfi", "tli","rmsea", "rmsea.ci.lower", "rmsea.ci.upper", "srmr"))
+fitmeasures(fit5, "chisq")/fitmeasures(fit5, "df")
+```
+
+# MI
+## configural invariance
+```{r}
+# preparing a matrix for results
+all.results.pcsisr13<-matrix(NA, nrow = 3, ncol = 9)
+colnames(all.results.pcsisr13)<-c("chisq", "df", "pvalue", "rmsea",
+                                  "rmsea.ci.lower", "rmsea.ci.upper",
+                                  "cfi","tli", "srmr")
+
+# Fitting configural model in lavaan via cfa function
+fit.configural <- cfa(teen.model, data = tbi.pcsisr13, group = "tbi", std.lv = TRUE)
+
+# results
+summary(fit.configural)
+
+# adding results to matrix
+all.results.pcsisr13[1,]<-round(data.matrix(fitmeasures(fit.configural,
+                                                        fit.measures = c("chisq", "df", 
+                                                                         "pvalue", "rmsea",
+                                                                         "rmsea.ci.lower",
+                                                                         "rmsea.ci.upper",
+                                                                         "cfi","tli",
+                                                                         "srmr"))),
+                        digits=3)
+
+fitmeasures(fit.configural, "chisq")/fitmeasures(fit.configural, "df")
+```
+
+## weak invariance
+```{r}
+# fitting into lavaan
+fit.weak <- cfa(teen.model, data = tbi.pcsisr13, group = "tbi", group.equal = "loadings",
+                std.lv = TRUE)
+
+# results
+summary(fit.weak)
+
+# adding results to matrix
+all.results.pcsisr13[2,]<-round(data.matrix(fitmeasures(fit.weak,
+                                                        fit.measures = c("chisq", "df", 
+                                                                         "pvalue", "rmsea",
+                                                                         "rmsea.ci.lower",
+                                                                         "rmsea.ci.upper",
+                                                                         "cfi","tli",
+                                                                         "srmr"))),
+                       digits=3)
+
+fitmeasures(fit.weak, "chisq")/fitmeasures(fit.weak, "df")
+
+# comparing the models
+lavTestLRT(fit.configural,fit.weak) # significant, baseline
+```
+
+## strong invariance
+```{r}
+# fitting into lavaan
+fit.strong <- cfa(teen.model, data = tbi.pcsisr13, group = "tbi",
+                  group.equal = c("loadings", "intercepts"),
+                  std.lv = TRUE)
+
+# results
+summary(fit.strong)
+
+# adding results to matrix
+all.results.pcsisr13[3,]<-round(data.matrix(fitmeasures(fit.strong,
+                                                        fit.measures = c("chisq", "df", 
+                                                                         "pvalue", "rmsea",
+                                                                         "rmsea.ci.lower",
+                                                                         "rmsea.ci.upper",
+                                                                         "cfi","tli",
+                                                                         "srmr"))),
+                       digits=3)
+
+fitmeasures(fit.strong, "chisq")/fitmeasures(fit.strong, "df")
+
+# comparing the models
+lavTestLRT(fit.weak, fit.strong) # significant, strong
+lavTestLRT(fit.configural, fit.weak, fit.strong)
+```
+
+# Comparison TBI vs. HEALTHY
+
+```{r}
+physical.pcsi13 <- c("Headache",
+                     "Nausea",
+                     "Balance problems",
+                     "Dizziness",
+                     "Visual problems (double vision, blurring)",
+                     "Move in a clumsy manner",
+                     "Sensitivity to light",
+                     "Sensitivity to noise")
+
+emotional.pcsi13 <- c("Irritability",
+                      "Sadness",
+                      "Nervousness",
+                      "Feeling more emotional")
+
+cognitive.pcsi13 <- c("Feeling mentally foggy",
+                      "Difficulty concentrating",
+                      "Difficulty remembering",
+                      "Get confused with directions or tasks",
+                      "Answer questions more slowly than usual",
+                      "Feeling slowed down")
+
+fatigue.pcsi13 <- c("Fatigue",
+                    "Drowsiness",
+                    "Sleep more than usual")
+
+names.pcsi13 <- c(physical.pcsi13, emotional.pcsi13, cognitive.pcsi13, fatigue.pcsi13)
+```
+
+## fit.weak
+
+```{r}
+fitted_load_health <- 1-pnorm(inspect(fit.weak, "fitted")$`1`$mean)
+inspect(fit.weak, "fitted")
+```
+
+```{r}
+fitted_load_TBI <- 1-pnorm(inspect(fit.weak, "fitted")$`2`$mean)
+```
+
+```{r}
+dif_fitted_load <- fitted_load_health - fitted_load_TBI
+```
+
+## plots
+```{r}
+plot_health <- data.frame(Values = as.vector(fitted_load_health),
+                         Items = str_split(names(fitted_load_health), "\\|", 2, simplify = TRUE)[,1],
+                         Thresholds = str_split(names(fitted_load_health), "\\|", 2, simplify = TRUE)[,2],
+                         Diff = as.vector(dif_fitted_load))
+```
+
+```{r}
+plot_health_re <- reshape(plot_health,
+        timevar = "Thresholds",
+        idvar = "Items",
+        direction = "wide")
+
+names(plot_health_re) = c("Items", paste(c("Mean", "Diff"), #rep(1:12, each = 2),
+                                         sep = ""))
+```
+
+```{r}
+plot_health_re$Sample <- 0
+```
+
+```{r}
+plot_TBI <- data.frame(Values = as.vector(fitted_load_TBI),
+                         Items = str_split(names(fitted_load_TBI), "\\|", 2, simplify = TRUE)[,1],
+                         Thresholds = str_split(names(fitted_load_TBI), "\\|", 2, simplify = TRUE)[,2],
+                         Diff = as.vector(dif_fitted_load))
+```
+
+```{r}
+plot_TBI_re <- reshape(plot_TBI,
+        timevar = "Thresholds",
+        idvar = "Items",
+        direction = "wide")
+
+names(plot_TBI_re) = c("Items", paste(c("Mean", "Diff"), #rep(1:2, each = 2),
+                                      sep = ""))
+```
+
+```{r}
+plot_TBI_re$Sample <- 1
+```
+
+```{r}
+plot1 <- rbind.data.frame(plot_health_re, plot_TBI_re)
+```
+
+```{r}
+plot1$Sample <- factor(plot1$Sample,
+                       c(0,1),
+                       c("general population", "TBI"))
+```
+
+```{r}
+tiff("FigureA1_metric_imputiert.tif", width = 7, height = 12, units = "in", res = 300)
+layout(matrix(c(1,2), nrow = 1, ncol = 2, byrow = TRUE))
+
+# labels
+par(mar = c(3, 17, 4, 0))
+plot.new()
+plot.window(ylim = c(0, 21),
+            xlim = c(0, 1),
+            yaxt = "n")
+axis(2, c(length(names.pcsi13):1), names.pcsi13, las = 2, cex.axis = .95)
+
+# T1
+par(mar = c(3, 1, 4, 1))
+plot(plot1$Mean[plot1$Sample == "general population"],
+     c(length(plot1$Items[plot1$Sample == "general population"]):1),
+     xaxt = "n",
+     yaxt = "n",
+     ylim = c(0, 21),
+     xlim = c(0, 1),
+     xlab = "",
+     ylab = "",
+     pch = 16,
+     col = ifelse(plot1$Diff1[plot1$Sample == "general population"] > 0.05, "red", "black"))
+
+abline(h = c(1:21), col = "lightgrey", lty = 3)
+
+points(plot1$Mean[plot1$Sample == "general population"],
+       c(length(plot1$Items[plot1$Sample == "general population"]):1),
+       col = ifelse(plot1$Diff[plot1$Sample == "general population"] > 0.05, "red", "black"),
+       pch = 16)
+
+points(plot1$Mean[plot1$Sample == "TBI"],
+       c(length(plot1$Items[plot1$Sample == "TBI"]):1),
+       col = ifelse(plot1$Diff[plot1$Sample == "TBI"] > 0.05, "red", "black"))
+
+axis(1, seq(0, 1, 0.2), seq(0, 1, 0.2))
+
+title("Comparison: Means weak invariance", adj = 0, line = 1)
+
+segments(plot1$Mean[plot1$Sample == "general population"],
+         c(length(names.pcsi13):1),
+         plot1$Mean[plot1$Sample == "TBI"],
+         c(length(names.pcsi13):1),
+         lty = 2,
+         col = ifelse(plot1$Diff[plot1$Sample == "general population"] > 0.05, "red", "gray"))
+
+legend("bottomright",
+       bty = "n",
+       pch = c(16, 1),
+       lty = 3,
+       col = c(rep(1,2), 2),
+       c("general population sample",
+         "TBI sample",
+         "difference > 5%"))
+dev.off()
+```
+
+## fit.strong
+
+```{r}
+fitted_load_health2 <- 1-pnorm(inspect(fit.strong, "fitted")$`1`$mean)
+inspect(fit.strong, "fitted")
+```
+
+```{r}
+fitted_load_TBI2 <- 1-pnorm(inspect(fit.strong, "fitted")$`2`$mean)
+
+fitted.base<-1-pnorm(inspect(fit.configural, "fitted")$`2`$mean)
+```
+
+```{r}
+dif_fitted_load2 <- fitted_load_health2 - fitted_load_TBI2
+```
+
+## plots
+```{r}
+plot_health2 <- data.frame(Values = as.vector(fitted_load_health2),
+                         Items = str_split(names(fitted_load_health2), "\\|", 2, simplify = TRUE)[,1],
+                         Thresholds = str_split(names(fitted_load_health2), "\\|", 2, simplify = TRUE)[,2],
+                         Diff = as.vector(dif_fitted_load2))
+```
+
+```{r}
+plot_health_re2 <- reshape(plot_health2,
+        timevar = "Thresholds",
+        idvar = "Items",
+        direction = "wide")
+
+names(plot_health_re2) = c("Items", paste(c("Mean", "Diff"), #rep(1:12, each = 2),
+                                         sep = ""))
+```
+
+```{r}
+plot_health_re2$Sample <- 0
+```
+
+```{r}
+plot_TBI2 <- data.frame(Values = as.vector(fitted_load_TBI2),
+                         Items = str_split(names(fitted_load_TBI2), "\\|", 2, simplify = TRUE)[,1],
+                         Thresholds = str_split(names(fitted_load_TBI2), "\\|", 2, simplify = TRUE)[,2],
+                         Diff = as.vector(dif_fitted_load2))
+```
+
+```{r}
+plot_TBI_re2 <- reshape(plot_TBI2,
+        timevar = "Thresholds",
+        idvar = "Items",
+        direction = "wide")
+
+names(plot_TBI_re2) = c("Items", paste(c("Mean", "Diff"), #rep(1:2, each = 2),
+                                      sep = ""))
+```
+
+```{r}
+plot_TBI_re2$Sample <- 1
+```
+
+```{r}
+plot2 <- rbind.data.frame(plot_health_re2, plot_TBI_re2)
+```
+
+```{r}
+plot2$Sample <- factor(plot2$Sample,
+                       c(0,1),
+                       c("general population", "TBI"))
+```
+
+```{r}
+tiff("FigureA2_metric_imputiert.tif", width = 7, height = 12, units = "in", res = 300)
+layout(matrix(c(1,2), nrow = 1, ncol = 2, byrow = TRUE))
+
+# labels
+par(mar = c(3, 17, 4, 0))
+plot.new()
+plot.window(ylim = c(0, 21),
+            xlim = c(0, 1),
+            yaxt = "n")
+axis(2, c(length(names.pcsi13):1), names.pcsi13, las = 2, cex.axis = .95)
+
+# T1
+par(mar = c(3, 1, 4, 1))
+plot(plot2$Mean[plot2$Sample == "general population"],
+     c(length(plot2$Items[plot2$Sample == "general population"]):1),
+     xaxt = "n",
+     yaxt = "n",
+     ylim = c(0, 21),
+     xlim = c(0, 1),
+     xlab = "",
+     ylab = "",
+     pch = 16,
+     col = ifelse(plot2$Diff1[plot2$Sample == "general population"] > 0.05, "red", "black"))
+
+abline(h = c(1:21), col = "lightgrey", lty = 3)
+
+points(plot2$Mean[plot2$Sample == "general population"],
+       c(length(plot2$Items[plot2$Sample == "general population"]):1),
+       col = ifelse(plot2$Diff[plot2$Sample == "general population"] > 0.05, "red", "black"),
+       pch = 16)
+
+points(plot2$Mean[plot2$Sample == "TBI"],
+       c(length(plot2$Items[plot2$Sample == "TBI"]):1),
+       col = ifelse(plot2$Diff[plot2$Sample == "TBI"] > 0.05, "red", "black"))
+
+axis(1, seq(0, 1, 0.2), seq(0, 1, 0.2))
+
+title("Comparison: Means strong invariance", adj = 0, line = 1)
+
+segments(plot2$Mean[plot2$Sample == "general population"],
+         c(length(names.pcsi13):1),
+         plot2$Mean[plot2$Sample == "TBI"],
+         c(length(names.pcsi13):1),
+         lty = 2,
+         col = ifelse(plot2$Diff[plot2$Sample == "general population"] > 0.05, "red", "gray"))
+
+legend("bottomright",
+       bty = "n",
+       pch = c(16, 1),
+       lty = 3,
+       col = c(rep(1,2), 2),
+       c("general population sample",
+         "TBI sample",
+         "difference > 5%"))
+dev.off()
+```
+
+## fit.weak quer
+
+```{r}
+fitted_load_health <- 1-pnorm(inspect(fit.weak, "fitted")$`1`$mean)
+inspect(fit.weak, "fitted")
+```
+
+```{r}
+fitted_load_TBI <- 1-pnorm(inspect(fit.weak, "fitted")$`2`$mean)
+```
+
+```{r}
+dif_fitted_load <- fitted_load_health - fitted_load_TBI
+```
+
+## plots
+```{r}
+plot_health <- data.frame(Values = as.vector(fitted_load_health),
+                         Items = str_split(names(fitted_load_health), "\\|", 2, simplify = TRUE)[,1],
+                         Thresholds = str_split(names(fitted_load_health), "\\|", 2, simplify = TRUE)[,2],
+                         Diff = as.vector(dif_fitted_load))
+```
+
+```{r}
+plot_health_re <- reshape(plot_health,
+        timevar = "Thresholds",
+        idvar = "Items",
+        direction = "wide")
+
+names(plot_health_re) = c("Items", paste(c("Mean", "Diff"), #rep(1:12, each = 2),
+                                         sep = ""))
+```
+
+```{r}
+plot_health_re$Sample <- 0
+```
+
+```{r}
+plot_TBI <- data.frame(Values = as.vector(fitted_load_TBI),
+                         Items = str_split(names(fitted_load_TBI), "\\|", 2, simplify = TRUE)[,1],
+                         Thresholds = str_split(names(fitted_load_TBI), "\\|", 2, simplify = TRUE)[,2],
+                         Diff = as.vector(dif_fitted_load))
+```
+
+```{r}
+plot_TBI_re <- reshape(plot_TBI,
+        timevar = "Thresholds",
+        idvar = "Items",
+        direction = "wide")
+
+names(plot_TBI_re) = c("Items", paste(c("Mean", "Diff"), #rep(1:2, each = 2),
+                                      sep = ""))
+```
+
+```{r}
+plot_TBI_re$Sample <- 1
+```
+
+```{r}
+plot1 <- rbind.data.frame(plot_health_re, plot_TBI_re)
+```
+
+```{r}
+plot1$Sample <- factor(plot1$Sample,
+                       c(0,1),
+                       c("general population", "TBI"))
+```
+
+```{r}
+tiff("FigureA1_metric_imputiert.tif", width = 7, height = 12, units = "in", res = 300)
+layout(matrix(c(1,2), nrow = 1, ncol = 2, byrow = TRUE))
+
+# labels
+par(mar = c(3, 17, 4, 0))
+plot.new()
+plot.window(ylim = c(0, 21),
+            xlim = c(0, 1),
+            yaxt = "n")
+axis(2, c(length(names.pcsi13):1), names.pcsi13, las = 2, cex.axis = .95)
+
+# T1
+par(mar = c(3, 1, 4, 1))
+plot(plot1$Mean[plot1$Sample == "general population"],
+     c(length(plot1$Items[plot1$Sample == "general population"]):1),
+     xaxt = "n",
+     yaxt = "n",
+     ylim = c(0, 21),
+     xlim = c(0, 1),
+     xlab = "",
+     ylab = "",
+     pch = 16,
+     col = ifelse(plot1$Diff1[plot1$Sample == "general population"] > 0.05, "red", "black"))
+
+abline(h = c(1:21), col = "lightgrey", lty = 3)
+
+points(plot1$Mean[plot1$Sample == "general population"],
+       c(length(plot1$Items[plot1$Sample == "general population"]):1),
+       col = ifelse(plot1$Diff[plot1$Sample == "general population"] > 0.05, "red", "black"))
+
+points(plot1$Mean[plot1$Sample == "TBI"],
+       c(length(plot1$Items[plot1$Sample == "TBI"]):1),
+       col = ifelse(plot1$Diff[plot1$Sample == "TBI"] > 0.05, "red", "black"))
+
+axis(1, seq(0, 1, 0.2), seq(0, 1, 0.2))
+
+title("Comparison: Means weak invariance", adj = 0, line = 1)
+
+segments(plot1$Mean[plot1$Sample == "general population"],
+         c(length(names.pcsi13):1),
+         plot1$Mean[plot1$Sample == "TBI"],
+         c(length(names.pcsi13):1),
+         lty = 2,
+         col = ifelse(plot1$Diff[plot1$Sample == "general population"] > 0.05, "red", "gray"))
+
+legend("bottomright",
+       bty = "n",
+       pch = c(16, 1),
+       lty = 3,
+       col = c(rep(1,2), 2),
+       c("general population sample",
+         "TBI sample",
+         "difference > 5%"))
+dev.off()
+```

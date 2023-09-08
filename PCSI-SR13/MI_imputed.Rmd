@@ -1,0 +1,651 @@
+---
+title: "07A_MI_imputiert"
+output: html_document
+date: "2023-04-19"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# load packages
+
+```{r}
+library(tidyverse)
+library(lavaan)
+library(semTools)
+library(dplyr)
+library(haven)
+```
+
+# import data
+```{r}
+tbi13<-read_sav("Datensatz_3_Masterarbeit_DT_22_23.sav")
+load("data_final.Rdata")
+```
+
+## preparation of tbi-data
+```{r}
+# removing unnecessary columns
+tbi13<-subset(tbi13) %>% 
+  dplyr::select(-ends_with("prae")) %>% 
+  dplyr::select(-contains("RAPID")) %>% 
+  dplyr::select(-c("Laufende_Nummer", "Zentrum", "TestdatumJ", "TestdatumE", "Schweregrad", "KOSCHI",
+                   "BesVer_Mutter", "BesVer_Vater", "stationary", "ambulatory", "direct",
+                   "indirect", "multilingual", "Testdatum.Untersucher")) %>% 
+  dplyr::select(-contains("SHT")) %>% 
+  dplyr::select(-ends_with("tri")) %>% 
+  dplyr::select(-starts_with("Low")) %>% 
+  dplyr::select(-starts_with("U")) %>%
+  dplyr::select(-starts_with("High")) %>%
+  dplyr::select(-starts_with("frontal")) %>%
+  dplyr::select(-starts_with("temporal")) %>% 
+  dplyr::select(-starts_with("parietal")) %>% 
+  dplyr::select(-starts_with("occipital")) %>% 
+  dplyr::select(-contains("Rating")) %>% 
+  dplyr::select(-contains("Source")) %>% 
+  dplyr::select(-contains("Bogen")) %>% 
+  dplyr::select(-contains("SoDe")) %>% 
+  dplyr::select(-contains("P_post")) %>% 
+  dplyr::select(-contains("RPQ")) %>% 
+  dplyr::select(-contains("Spalte")) %>%
+  dplyr::select(-contains("insgesamt")) %>%
+  dplyr::select(-contains("Gesamt"))
+```
+
+```{r}
+# renaming
+tbi13<-rename(tbi13, id="ID", sex.kid="GenderJ", age.kid="AlterJ",
+                age.cluster="Altersgruppe", education.mum="BildAb_Mutter",
+                education.dad="BildAb_Vater", fam.situation="FamSit",
+                pcsisr1301="Item1_phy_J_post",
+                pcsisr1302="Item2_phy_J_post",
+                pcsisr1303="Item3_phy_J_post",
+                pcsisr1304="Item4_phy_J_post",
+                pcsisr1305="Item5_phy_J_post",
+                pcsisr1306="Item6_phy_J_post",
+                pcsisr1307="Item7_phy_J_post",
+                pcsisr1308="Item8_phy_J_post",
+                pcsisr1309="Item9_em_J_post",
+                pcsisr1310="Item10_em_J_post",
+                pcsisr1311="Item11_em_J_post",
+                pcsisr1312="Item12_em_J_post",
+                pcsisr1313="Item13_kog_J_post",
+                pcsisr1314="Item14_kog_J_post",
+                pcsisr1315="Item15_kog_J_post",
+                pcsisr1316="Item16_kog_J_post",
+                pcsisr1317="Item17_kog_J_post",
+                pcsisr1318="Item18_kog_J_post",
+                pcsisr1319="Item19_fat_J_post",
+                pcsisr1320="Item20_fat_J_post",
+                pcsisr1321="Item21_fat_J_post",
+                age.fam="AlterdesElternteils", submitdate="Testdatum2")
+```
+
+```{r}
+# rounding age to integer
+tbi13$age.kid<-signif(tbi13$age.kid, digits = 2)
+```
+
+```{r}
+# back-up data
+tbi13.1<-tbi13
+```
+
+# auxiliary variable
+
+```{r}
+items.pcsi13 <- paste("pcsisr13", c("01", "02", "03", "04", "05", "06", "07", "08", "09", "10",
+                                    "11", "12", "13", "14", "15", "16", "17", "18", "19", "20",
+                                    "21"), sep = "")
+
+physical.13 <- c("pcsisr1301", "pcsisr1302", "pcsisr1303", 
+                "pcsisr1304", "pcsisr1305", "pcsisr1306", 
+                "pcsisr1307","pcsisr1308")
+
+emotional.13 <- c("pcsisr1309", "pcsisr1310", "pcsisr1311", "pcsisr1312")
+
+cognitive.13 <- c("pcsisr1313", "pcsisr1314", "pcsisr1315", "pcsisr1316",
+                  "pcsisr1317", "pcsisr1318")
+
+fatigue.13 <- c("pcsisr1319", "pcsisr1320", "pcsisr1321")
+```
+
+
+```{r}
+tbi13.1$missings = apply(tbi13.1, 1, function(x){sum(is.na(x))}) 
+```
+
+```{r}
+table(tbi13.1$missings)
+```
+
+# Replace missing values with mean of the remaining items for tbi-data
+
+```{r}
+tbi13.1[tbi13.1$missings == 1, physical.13] = apply(tbi13.1[tbi13.1$missings == 1, physical.13], 2, 
+      function(x)(ifelse(is.na(x) == T, round(rowMeans(tbi13.1[tbi13.1$missings == 1, physical.13], na.rm = T)), x)))
+```
+
+```{r}
+tbi13.1[tbi13.1$missings == 1, emotional.13] = apply(tbi13.1[tbi13.1$missings == 1, emotional.13], 2, 
+      function(x)(ifelse(is.na(x) == T, round(rowMeans(tbi13.1[tbi13.1$missings == 1, emotional.13], na.rm = T)), x)))
+```
+
+```{r}
+tbi13.1[tbi13.1$missings == 1, cognitive.13] = apply(tbi13.1[tbi13.1$missings == 1, cognitive.13], 2, 
+      function(x)(ifelse(is.na(x) == T, round(rowMeans(tbi13.1[tbi13.1$missings == 1, cognitive.13], na.rm = T)), x)))
+```
+
+```{r}
+tbi13.1[tbi13.1$missings == 1, fatigue.13] = apply(tbi13.1[tbi13.1$missings == 1, fatigue.13], 2, 
+      function(x)(ifelse(is.na(x) == T, round(rowMeans(tbi13.1[tbi13.1$missings == 1, fatigue.13], na.rm = T)), x)))
+```
+
+## Scales
+
+```{r}
+tbi13.1$pcsisr13.physical = apply(tbi13.1[physical.13],1,sum)
+tbi13.1$pcsisr13.emotional = apply(tbi13.1[emotional.13],1,sum)
+tbi13.1$pcsisr13.cognitive = apply(tbi13.1[cognitive.13],1,sum)
+tbi13.1$pcsisr13.fatigue = apply(tbi13.1[fatigue.13],1,sum)
+tbi13.1$pcsisr13.total = apply(tbi13.1[items.pcsi13],1,sum)
+```
+
+```{r}
+write_csv(tbi13.1, file = "PCSI-SR13_TBI_imputed.csv")
+save(tbi13.1, file = "PCSI-SR13_TBI_imputed.RData")
+```
+
+# data
+## original data (0-6)
+
+```{r}
+# tbi
+tbi13.2<-tbi13.1
+```
+
+```{r}
+# healthy
+dat.h2<-dat.f
+```
+
+## tricho data (0 = 0, 1 = 1-3, 2 = 4-6, c. Sady table 3)
+
+```{r}
+# back-up data
+tbi13.tricho<-tbi13.1
+dat.h.tricho<-dat.f
+```
+
+```{r}
+# tbi
+tbi13.tricho[, items.pcsi13]<-apply(tbi13.tricho[, items.pcsi13], 2,
+                                    function (x) {ifelse (x == 0, 0,
+                                                          ifelse(x == 1 | x == 2 | x == 3, 1, 2))})
+```
+
+```{r}
+# healthy
+dat.h.tricho[, items.pcsi13]<-apply(dat.h.tricho[, items.pcsi13], 2,
+                                    function (x) {ifelse (x == 0, 0,
+                                                          ifelse(x == 1 | x == 2 | x == 3, 1, 2))})
+```
+
+# merge tbi & healthy
+## original data
+```{r}
+# subsetting
+bet<-dat.h2 %>%
+  dplyr::select(id, age.cluster, pcsisr1301:pcsisr1321)
+
+# add identifications
+bet$tbi<-1
+tbi13.2$tbi<-2
+
+bet$age.cluster<-as.numeric(bet$age.cluster)
+
+# merging
+tbi.pcsisr13<-bind_rows(bet, tbi13.2)
+```
+
+## tricho data
+```{r}
+# subsetting
+bet2<-dat.h.tricho %>% 
+  dplyr::select(id, age.cluster, pcsisr1301:pcsisr1321)
+
+# add identifications
+bet2$tbi<-1
+tbi13.tricho$tbi<-2
+
+bet2$age.cluster<-as.numeric(bet2$age.cluster)
+
+# merging
+tbi.pcsisr13.tricho<-bind_rows(bet2, tbi13.tricho)
+```
+
+# cfa model
+
+```{r}
+teen.model <- ' # measurement model
+                    physical =~ pcsisr1301 + pcsisr1302 + pcsisr1303 + pcsisr1304 + pcsisr1305 +
+                                pcsisr1306 + pcsisr1307 + pcsisr1308
+                   emotional =~ pcsisr1309 + pcsisr1310 + pcsisr1311 + pcsisr1312
+                   cognitive =~ pcsisr1313 + pcsisr1314 + pcsisr1315 + pcsisr1316 + pcsisr1317 +
+                                pcsisr1318
+                     fatigue =~ pcsisr1319 + pcsisr1320 + pcsisr1321
+              '
+```
+
+# cfa tbi
+## original data
+```{r}
+fit1 <- cfa(teen.model, data = tbi13.2, ordered = TRUE, std.lv = TRUE)
+# variance-covariance matrix of the estimated parameters is not positive definite
+```
+
+```{r}
+write.table(lavInspect(fit1, "vcov"), "PCSI_13_check_vcov_TBI_imputiert.csv", row.names = T, sep = ";")
+summary(fit1)
+```
+
+## tricho data
+```{r}
+fit2 <- cfa(teen.model, data = tbi13.tricho, ordered = TRUE, std.lv = TRUE)
+summary(fit2, fit.measures = TRUE, standardized = TRUE)
+fitmeasures(fit2, c("chisq.scaled","df.scaled", "cfi.scaled", "tli.scaled","rmsea.scaled",
+                           "rmsea.ci.lower.scaled", "rmsea.ci.upper.scaled", "srmr")) # good fit, except srmr
+fitmeasures(fit2, "chisq.scaled")/fitmeasures(fit2, "df.scaled")
+```
+
+# cfa healthy
+## original data
+```{r}
+fit3 <- cfa(teen.model, data = dat.h2, ordered = TRUE, std.lv = TRUE)
+summary(fit3, fit.measures = TRUE, standardized = TRUE)
+fitmeasures(fit3, c("chisq.scaled","df.scaled", "cfi.scaled", "tli.scaled","rmsea.scaled",
+                           "rmsea.ci.lower.scaled", "rmsea.ci.upper.scaled", "srmr")) # good fit
+fitmeasures(fit3, "chisq.scaled")/fitmeasures(fit3, "df.scaled")
+```
+
+## tricho data
+```{r}
+fit4 <- cfa(teen.model, data = dat.h.tricho, ordered = TRUE, std.lv = TRUE)
+summary(fit4, fit.measures = TRUE, standardized = TRUE)
+fitmeasures(fit4, c("chisq.scaled","df.scaled", "cfi.scaled", "tli.scaled","rmsea.scaled",
+                           "rmsea.ci.lower.scaled", "rmsea.ci.upper.scaled", "srmr")) # good fit
+fitmeasures(fit4, "chisq.scaled")/fitmeasures(fit4, "df.scaled")
+```
+
+# cfa mixed
+## original data
+```{r}
+fit5 <- cfa(teen.model, data = tbi.pcsisr13, ordered = TRUE, std.lv = TRUE)
+# variance-covariance matrix of the estimated parameters is not positive definite
+```
+
+```{r}
+write.table(lavInspect(fit5, "vcov"), "PCSI_13_check_vcov_MIXED_imputiert.csv", row.names = T, sep = ";")
+summary(fit5)
+```
+
+## tricho data
+```{r}
+fit6 <- cfa(teen.model, data = tbi.pcsisr13.tricho, ordered = TRUE, std.lv = TRUE)
+summary(fit6, fit.measures = TRUE, standardized = TRUE)
+fitmeasures(fit6, c("chisq.scaled","df.scaled", "cfi.scaled", "tli.scaled","rmsea.scaled",
+                           "rmsea.ci.lower.scaled", "rmsea.ci.upper.scaled", "srmr")) # good fit
+fitmeasures(fit6, "chisq.scaled")/fitmeasures(fit6, "df.scaled")
+```
+
+# MI tricho
+## baseline
+```{r}
+# preparing a matrix for results
+all.results.pcsisr13<-matrix(NA, nrow = 3, ncol = 9)
+colnames(all.results.pcsisr13)<-c("chisq.scaled", "df.scaled", "pvalue.scaled", "rmsea.scaled",
+                                  "rmsea.ci.lower.scaled", "rmsea.ci.upper.scaled",
+                                  "cfi.scaled","tli.scaled", "srmr")
+# baseline model
+baseline <- measEq.syntax(configural.model = teen.model,
+                           data = tbi.pcsisr13.tricho,
+                           ordered = c("pcsisr1301", "pcsisr1302", "pcsisr1303", "pcsisr1304", "pcsisr1305", 
+                                       "pcsisr1306", "pcsisr1307", "pcsisr1308", "pcsisr1309", "pcsisr1310",
+                                       "pcsisr1311", "pcsisr1312", "pcsisr1313", "pcsisr1314", "pcsisr1315",
+                                       "pcsisr1316", "pcsisr1317", "pcsisr1318", "pcsisr1319", "pcsisr1320",
+                                       "pcsisr1321"),
+                           parameterization = "delta", ID.fac = "std.lv",
+                           ID.cat = "Wu.Estabrook.2016", group = "tbi",
+                           group.equal = "configural")
+
+summary(baseline)
+
+# constraints
+cat(as.character(baseline))
+
+# as.character to submit to lavaan
+model.baseline <- as.character(baseline)
+
+# Fitting baseline model in lavaan via cfa function
+fit.baseline <- cfa(model.baseline, data = tbi.pcsisr13.tricho, group = "tbi",
+                     ordered = c("pcsisr1301", "pcsisr1302", "pcsisr1303", "pcsisr1304", "pcsisr1305", 
+                                 "pcsisr1306", "pcsisr1307", "pcsisr1308", "pcsisr1309", "pcsisr1310",
+                                 "pcsisr1311", "pcsisr1312", "pcsisr1313", "pcsisr1314", "pcsisr1315",
+                                 "pcsisr1316", "pcsisr1317", "pcsisr1318", "pcsisr1319", "pcsisr1320",
+                                 "pcsisr1321"), std.lv = TRUE)
+
+# results
+summary(fit.baseline)
+
+# adding results to matrix
+all.results.pcsisr13[1,]<-round(data.matrix(fitmeasures(fit.baseline,
+                                                        fit.measures = c("chisq.scaled", "df.scaled", 
+                                                                         "pvalue.scaled", "rmsea.scaled",
+                                                                         "rmsea.ci.lower.scaled",
+                                                                         "rmsea.ci.upper.scaled",
+                                                                         "cfi.scaled","tli.scaled",
+                                                                         "srmr"))),
+                        digits=3)
+
+fitmeasures(fit.baseline, "chisq.scaled")/fitmeasures(fit.baseline, "df.scaled")
+```
+
+## thresholds
+```{r}
+# thresholds model
+prop4d <- measEq.syntax(configural.model = teen.model,
+                        data = tbi.pcsisr13.tricho,
+                        ordered = c("pcsisr1301", "pcsisr1302", "pcsisr1303", "pcsisr1304", "pcsisr1305", 
+                                    "pcsisr1306", "pcsisr1307", "pcsisr1308", "pcsisr1309", "pcsisr1310",
+                                    "pcsisr1311", "pcsisr1312", "pcsisr1313", "pcsisr1314", "pcsisr1315",
+                                    "pcsisr1316", "pcsisr1317", "pcsisr1318", "pcsisr1319", "pcsisr1320",
+                                    "pcsisr1321"),
+                        parameterization = "delta", ID.fac = "std.lv",
+                        ID.cat = "Wu.Estabrook.2016", group = "tbi",
+                        group.equal = c("thresholds"))
+
+model.prop4d <- as.character(prop4d)
+
+# fitting into lavaan
+fit.prop4d <- cfa(model.prop4d, data = tbi.pcsisr13.tricho, group = "tbi",
+                  ordered = c("pcsisr1301", "pcsisr1302", "pcsisr1303", "pcsisr1304", "pcsisr1305", 
+                              "pcsisr1306", "pcsisr1307", "pcsisr1308", "pcsisr1309", "pcsisr1310",
+                              "pcsisr1311", "pcsisr1312", "pcsisr1313", "pcsisr1314", "pcsisr1315",
+                              "pcsisr1316", "pcsisr1317", "pcsisr1318", "pcsisr1319", "pcsisr1320",
+                              "pcsisr1321"), std.lv = TRUE)
+
+# results
+summary(fit.prop4d)
+
+# adding results to matrix
+all.results.pcsisr13[2,]<-round(data.matrix(fitmeasures(fit.prop4d,
+                                                        fit.measures = c("chisq.scaled", "df.scaled", 
+                                                                         "pvalue.scaled", "rmsea.scaled",
+                                                                         "rmsea.ci.lower.scaled",
+                                                                         "rmsea.ci.upper.scaled",
+                                                                         "cfi.scaled","tli.scaled",
+                                                                         "srmr"))),
+                       digits=3)
+
+fitmeasures(fit.prop4d, "chisq.scaled")/fitmeasures(fit.prop4d, "df.scaled")
+
+# comparing the models
+lavTestLRT(fit.baseline,fit.prop4d) # same df
+```
+
+## thresholds and loading invariance
+```{r}
+# thresholds and loading model
+prop7d <- measEq.syntax(configural.model = teen.model,
+                        data = tbi.pcsisr13.tricho,
+                        ordered = c("pcsisr1301", "pcsisr1302", "pcsisr1303", "pcsisr1304", "pcsisr1305", 
+                                    "pcsisr1306", "pcsisr1307", "pcsisr1308", "pcsisr1309", "pcsisr1310",
+                                    "pcsisr1311", "pcsisr1312", "pcsisr1313", "pcsisr1314", "pcsisr1315",
+                                    "pcsisr1316", "pcsisr1317", "pcsisr1318", "pcsisr1319", "pcsisr1320",
+                                    "pcsisr1321"),
+                        parameterization = "delta", ID.fac = "std.lv",
+                        ID.cat = "Wu.Estabrook.2016", group = "tbi",
+                        group.equal = c("thresholds", "loadings"))
+
+model.prop7d <- as.character(prop7d)
+
+# fitting into lavaan
+fit.prop7d <- cfa(model.prop7d, data = tbi.pcsisr13.tricho, group = "tbi",
+                  ordered = c("pcsisr1301", "pcsisr1302", "pcsisr1303", "pcsisr1304", "pcsisr1305", 
+                              "pcsisr1306", "pcsisr1307", "pcsisr1308", "pcsisr1309", "pcsisr1310",
+                              "pcsisr1311", "pcsisr1312", "pcsisr1313", "pcsisr1314", "pcsisr1315",
+                              "pcsisr1316", "pcsisr1317", "pcsisr1318", "pcsisr1319", "pcsisr1320",
+                              "pcsisr1321"), std.lv = TRUE)
+
+# results
+summary(fit.prop7d)
+
+# adding results to matrix
+all.results.pcsisr13[3,]<-round(data.matrix(fitmeasures(fit.prop7d,
+                                                        fit.measures = c("chisq.scaled", "df.scaled", 
+                                                                         "pvalue.scaled", "rmsea.scaled",
+                                                                         "rmsea.ci.lower.scaled",
+                                                                         "rmsea.ci.upper.scaled",
+                                                                         "cfi.scaled","tli.scaled",
+                                                                         "srmr"))),
+                       digits=3)
+
+fitmeasures(fit.prop7d, "chisq.scaled")/fitmeasures(fit.prop7d, "df.scaled")
+
+# comparing the models
+lavTestLRT(fit.prop4d, fit.prop7d) # significant, prop4d
+```
+
+# Comparison TBI vs. HEALTHY - thresholds and loadings vs. thresholds
+
+```{r}
+physical.pcsi13 <- c("Headache",
+                     "Nausea",
+                     "Balance problems",
+                     "Dizziness",
+                     "Visual problems (double vision, blurring)",
+                     "Move in a clumsy manner",
+                     "Sensitivity to light",
+                     "Sensitivity to noise")
+
+emotional.pcsi13 <- c("Irritability",
+                      "Sadness",
+                      "Nervousness",
+                      "Feeling more emotional")
+
+cognitive.pcsi13 <- c("Feeling mentally foggy",
+                      "Difficulty concentrating",
+                      "Difficulty remembering",
+                      "Get confused with directions or tasks",
+                      "Answer questions more slowly than usual",
+                      "Feeling slowed down")
+
+fatigue.pcsi13 <- c("Fatigue",
+                    "Drowsiness",
+                    "Sleep more than usual")
+
+names.pcsi13 <- c(physical.pcsi13, emotional.pcsi13, cognitive.pcsi13, fatigue.pcsi13)
+```
+
+## difference thresholds and loadings model
+
+```{r}
+fitted_load_health <- 1-pnorm(inspect(fit.prop7d, "fitted")$`1`$th)
+inspect(fit.prop7d, "fitted")
+```
+
+```{r}
+fitted_load_TBI <- 1-pnorm(inspect(fit.prop7d, "fitted")$`2`$th)
+```
+
+```{r}
+dif_fitted_load_B <- fitted_load_health - fitted_load_TBI # negative values indicate higher values in TBI sample (higher HRQoL)
+```
+
+## difference thresholds model
+
+```{r}
+fitted_load_health_A <- 1-pnorm(inspect(fit.prop4d, "fitted")$`1`$th)
+```
+
+```{r}
+fitted_load_TBI_A <- 1-pnorm(inspect(fit.prop4d, "fitted")$`2`$th)
+```
+
+```{r}
+dif_fitted_load_A <- fitted_load_health_A - fitted_load_TBI_A
+```
+
+## differnce between both
+
+```{r}
+dif_fitted_load <- dif_fitted_load_B - dif_fitted_load_A # higher values indicate higher differences in restrictive model and for healthy participants
+```
+
+
+### plots
+```{r}
+plot_health <- data.frame(Values = as.vector(dif_fitted_load_B),
+                         Items = str_split(names(dif_fitted_load_B), "\\|", 2, simplify = TRUE)[,1],
+                         Thresholds = str_split(names(dif_fitted_load_B), "\\|", 2, simplify = TRUE)[,2],
+                         Diff = as.vector(dif_fitted_load))
+```
+
+```{r}
+plot_health_re <- reshape(plot_health,
+        timevar = "Thresholds",
+        idvar = "Items",
+        direction = "wide")
+
+names(plot_health_re) = c("Items", paste(c("T", "Diff"), rep(1:2, each = 2), sep = ""))
+```
+
+```{r}
+plot_health_re$Sample <- 0
+```
+
+```{r}
+plot_TBI <- data.frame(Values = as.vector(dif_fitted_load_A),
+                         Items = str_split(names(dif_fitted_load_A), "\\|", 2, simplify = TRUE)[,1],
+                         Thresholds = str_split(names(dif_fitted_load_A), "\\|", 2, simplify = TRUE)[,2],
+                         Diff = as.vector(dif_fitted_load))
+```
+
+```{r}
+plot_TBI_re <- reshape(plot_TBI,
+        timevar = "Thresholds",
+        idvar = "Items",
+        direction = "wide")
+
+names(plot_TBI_re) = c("Items", paste(c("T", "Diff"), rep(1:2, each = 2), sep = ""))
+```
+
+```{r}
+plot_TBI_re$Sample <- 1
+```
+
+```{r}
+plot1 <- rbind.data.frame(plot_health_re, plot_TBI_re)
+```
+
+```{r}
+plot1$Sample <- factor(plot1$Sample,
+                       c(0,1),
+                       c("Difference1", "Difference2"))
+```
+
+```{r}
+tiff("Figure_Differences_imputed.tif", width = 7, height = 8, units = "in", res = 300)
+layout(matrix(c(1,2,3), nrow = 1, ncol = 3, byrow = TRUE))
+
+# labels
+par(mar = c(3, 17, 4, 0))
+plot.new()
+plot.window(ylim = c(0, 21),
+            xlim = c(-0.3, 0.3),
+            yaxt = "n")
+axis(2, c(length(names.pcsi13):1), names.pcsi13, las = 2, cex.axis = .95)
+
+# T1
+par(mar = c(3, 1, 4, 0))
+plot(plot1$T1[plot1$Sample == "Difference1"],
+     c(length(plot1$Items[plot1$Sample == "Difference1"]):1),
+     xaxt = "n",
+     yaxt = "n",
+     ylim = c(0, 21),
+     xlim = c(-0.3, 0.3),
+     xlab = "",
+     ylab = "",
+     pch = 16,
+     col = ifelse(plot1$Diff1[plot1$Sample == "Difference1"] > 0.05, "red", "black"))
+
+abline(h = c(1:21), col = "lightgrey", lty = 3)
+abline(v=0, col = "lightgrey")
+
+points(plot1$T1[plot1$Sample == "Difference1"],
+       c(length(plot1$Items[plot1$Sample == "Difference1"]):1),
+       col = ifelse(plot1$Diff1[plot1$Sample == "Difference1"] > 0.05, "red", "black"))
+
+points(plot1$T1[plot1$Sample == "Difference2"],
+       c(length(plot1$Items[plot1$Sample == "Difference2"]):1),
+       col = ifelse(plot1$Diff1[plot1$Sample == "Difference2"] > 0.05, "red", "black"))
+
+axis(1, seq(-0.3, 0.3, 0.2), seq(-0.3, 0.3, 0.2))
+
+title("Comparison: T1", adj = 0, line = 1)
+
+segments(plot1$T1[plot1$Sample == "Difference1"],
+         c(length(names.pcsi13):1),
+         plot1$T1[plot1$Sample == "Difference2"],
+         c(length(names.pcsi13):1),
+         lty = 2,
+         col = ifelse(plot1$Diff1[plot1$Sample == "Difference1"] > 0.05, "red", "gray"))
+
+# T2
+par(mar = c(3, 1, 4, 1))
+
+plot(plot1$T2[plot1$Sample == "Difference1"],
+     c(length(plot1$Items[plot1$Sample == "Difference1"]):1),
+     xaxt = "n",
+     yaxt = "n",
+     ylim = c(0, 21),
+     xlim = c(-0.3, 0.3),
+     xlab = "",
+     ylab = "",
+     pch = 16,
+     col = ifelse(plot1$Diff2[plot1$Sample == "Difference1"] > 0.05, "red", "black"))
+
+abline(h = c(1:21), col = "lightgrey", lty = 3)
+abline(v=0, col = "lightgrey")
+
+points(plot1$T2[plot1$Sample == "Difference1"],
+       c(length(plot1$Items[plot1$Sample == "Difference1"]):1),
+       col = ifelse(plot1$Diff2[plot1$Sample == "Difference1"] > 0.05, "red", "black"))
+
+points(plot1$T2[plot1$Sample == "Difference2"],
+       c(length(plot1$Items[plot1$Sample == "Difference2"]):1),
+       col = ifelse(plot1$Diff2[plot1$Sample == "Differnce2"] > 0.05, "red", "black"))
+
+axis(1, seq(-0.3, 0.3,0.2), seq(-0.3, 0.3, 0.2))
+
+title ("T2", adj = 0, line = 1)
+
+segments(plot1$T2[plot1$Sample == "Difference1"], 
+         c(length(names.pcsi13):1), 
+         plot1$T2[plot1$Sample == "Difference2"], 
+         c(length(names.pcsi13):1),
+         lty = 2,
+         col = ifelse(plot1$Diff2[plot1$Sample == "Difference1"] > 0.05, "red", "gray"))
+
+legend("bottomright",
+       bty = "n",
+       pch = c(16, 1),
+       lty = 3,
+       col = c(rep(1,2), 2),
+       c("Difference thresholds and loadings",
+         "Difference thresholds",
+         "difference > 5%"))
+dev.off()
+```
+

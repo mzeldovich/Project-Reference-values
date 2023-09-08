@@ -1,0 +1,252 @@
+---
+title: "07B_MI_metric"
+output: html_document
+date: "2023-03-29"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# load packages
+
+```{r}
+library(tidyverse)
+library(lavaan)
+library(semTools)
+library(dplyr)
+library(haven)
+```
+
+# import data
+```{r}
+tbi13<-read_sav("Datensatz_3_Masterarbeit_DT_22_23.sav")
+load("data_final.Rdata")
+```
+
+## preparation of tbi-data
+```{r}
+# back-up data
+tbi13.1<-tbi13
+```
+
+```{r}
+# removing unnecessary columns
+tbi13.1<-subset(tbi13.1) %>% 
+  dplyr::select(-ends_with("prae")) %>% 
+  dplyr::select(-contains("RAPID")) %>% 
+  dplyr::select(-c("Laufende_Nummer", "Zentrum", "TestdatumJ", "TestdatumE", "Schweregrad", "KOSCHI",
+                   "BesVer_Mutter", "BesVer_Vater", "stationary", "ambulatory", "direct",
+                   "indirect", "multilingual", "Testdatum.Untersucher")) %>% 
+  dplyr::select(-contains("SHT")) %>% 
+  dplyr::select(-ends_with("tri")) %>% 
+  dplyr::select(-starts_with("Low")) %>% 
+  dplyr::select(-starts_with("U")) %>%
+  dplyr::select(-starts_with("High")) %>%
+  dplyr::select(-starts_with("frontal")) %>%
+  dplyr::select(-starts_with("temporal")) %>% 
+  dplyr::select(-starts_with("parietal")) %>% 
+  dplyr::select(-starts_with("occipital")) %>% 
+  dplyr::select(-contains("Rating")) %>% 
+  dplyr::select(-contains("Source")) %>% 
+  dplyr::select(-contains("Bogen")) %>% 
+  dplyr::select(-contains("SoDe")) %>% 
+  dplyr::select(-contains("P_post")) %>% 
+  dplyr::select(-contains("RPQ")) %>% 
+  dplyr::select(-contains("Spalte")) %>%
+  dplyr::select(-contains("insgesamt")) %>%
+  dplyr::select(-contains("Gesamt"))
+```
+
+```{r}
+# renaming
+tbi13.1<-rename(tbi13.1, id="ID", sex.kid="GenderJ", age.kid="AlterJ",
+                age.cluster="Altersgruppe", education.mum="BildAb_Mutter",
+                education.dad="BildAb_Vater", fam.situation="FamSit",
+                pcsisr1301="Item1_phy_J_post",
+                pcsisr1302="Item2_phy_J_post",
+                pcsisr1303="Item3_phy_J_post",
+                pcsisr1304="Item4_phy_J_post",
+                pcsisr1305="Item5_phy_J_post",
+                pcsisr1306="Item6_phy_J_post",
+                pcsisr1307="Item7_phy_J_post",
+                pcsisr1308="Item8_phy_J_post",
+                pcsisr1309="Item9_em_J_post",
+                pcsisr1310="Item10_em_J_post",
+                pcsisr1311="Item11_em_J_post",
+                pcsisr1312="Item12_em_J_post",
+                pcsisr1313="Item13_kog_J_post",
+                pcsisr1314="Item14_kog_J_post",
+                pcsisr1315="Item15_kog_J_post",
+                pcsisr1316="Item16_kog_J_post",
+                pcsisr1317="Item17_kog_J_post",
+                pcsisr1318="Item18_kog_J_post",
+                pcsisr1319="Item19_fat_J_post",
+                pcsisr1320="Item20_fat_J_post",
+                pcsisr1321="Item21_fat_J_post",
+                age.fam="AlterdesElternteils", submitdate="Testdatum2")
+```
+
+```{r}
+# rounding age to integer
+tbi13.1$age.kid<-signif(tbi13.1$age.kid, digits = 2)
+```
+
+# auxiliary variable
+
+```{r}
+items.pcsi13 <- paste("pcsisr13", c("01", "02", "03", "04", "05", "06", "07", "08", "09", "10",
+                                    "11", "12", "13", "14", "15", "16", "17", "18", "19", "20",
+                                    "21"), sep = "")
+```
+
+# data
+## original data (0-6)
+
+```{r}
+# tbi
+tbi13.2<-tbi13.1
+```
+
+```{r}
+# healthy
+dat.h2<-dat.f
+```
+
+# merge tbi & healthy
+## original data
+```{r}
+# subsetting
+bet<-dat.h2 %>%
+  dplyr::select(id, age.cluster, pcsisr1301:pcsisr1321)
+
+# add identifications
+bet$tbi<-1
+tbi13.2$tbi<-2
+
+bet$age.cluster<-as.numeric(bet$age.cluster)
+
+# merging
+tbi.pcsisr13<-bind_rows(bet, tbi13.2)
+```
+
+# cfa model
+
+```{r}
+teen.model <- ' # measurement model
+                    physical =~ pcsisr1301 + pcsisr1302 + pcsisr1303 + pcsisr1304 + pcsisr1305 +
+                                pcsisr1306 + pcsisr1307 + pcsisr1308
+                   emotional =~ pcsisr1309 + pcsisr1310 + pcsisr1311 + pcsisr1312
+                   cognitive =~ pcsisr1313 + pcsisr1314 + pcsisr1315 + pcsisr1316 + pcsisr1317 +
+                                pcsisr1318
+                     fatigue =~ pcsisr1319 + pcsisr1320 + pcsisr1321
+              '
+```
+
+# cfa tbi
+## original data
+```{r}
+fit1 <- cfa(teen.model, data = tbi13.2, std.lv = TRUE)
+summary(fit1, fit.measures = TRUE, standardized = TRUE)
+fitmeasures(fit1, c("chisq","df", "pvalue", "cfi", "tli","rmsea", "rmsea.ci.lower", "rmsea.ci.upper", "srmr"))
+fitmeasures(fit1, "chisq")/fitmeasures(fit1, "df")
+```
+
+# cfa healthy
+## original data
+```{r}
+fit3 <- cfa(teen.model, data = dat.h2, std.lv = TRUE)
+summary(fit3, fit.measures = TRUE, standardized = TRUE)
+fitmeasures(fit3, c("chisq","df", "pvalue", "cfi", "tli","rmsea", "rmsea.ci.lower", "rmsea.ci.upper", "srmr"))
+fitmeasures(fit3, "chisq")/fitmeasures(fit3, "df")
+```
+
+# cfa mixed
+## original data
+```{r}
+fit5 <- cfa(teen.model, data = tbi.pcsisr13, std.lv = TRUE)
+summary(fit5, fit.measures = TRUE, standardized = TRUE)
+fitmeasures(fit5, c("chisq","df", "pvalue", "cfi", "tli","rmsea", "rmsea.ci.lower", "rmsea.ci.upper", "srmr"))
+fitmeasures(fit5, "chisq")/fitmeasures(fit5, "df")
+```
+
+# MI
+## configural invariance
+```{r}
+# preparing a matrix for results
+all.results.pcsisr13<-matrix(NA, nrow = 3, ncol = 9)
+colnames(all.results.pcsisr13)<-c("chisq", "df", "pvalue", "rmsea",
+                                  "rmsea.ci.lower", "rmsea.ci.upper",
+                                  "cfi","tli", "srmr")
+
+# Fitting configural model in lavaan via cfa function
+fit.configural <- cfa(teen.model, data = tbi.pcsisr13, group = "tbi", std.lv = TRUE)
+
+# results
+summary(fit.configural)
+
+# adding results to matrix
+all.results.pcsisr13[1,]<-round(data.matrix(fitmeasures(fit.configural,
+                                                        fit.measures = c("chisq", "df", 
+                                                                         "pvalue", "rmsea",
+                                                                         "rmsea.ci.lower",
+                                                                         "rmsea.ci.upper",
+                                                                         "cfi","tli",
+                                                                         "srmr"))),
+                        digits=3)
+
+fitmeasures(fit.configural, "chisq")/fitmeasures(fit.configural, "df")
+```
+
+## weak invariance
+```{r}
+# fitting into lavaan
+fit.weak <- cfa(teen.model, data = tbi.pcsisr13, group = "tbi", group.equal = "loadings",
+                std.lv = TRUE)
+
+# results
+summary(fit.weak)
+
+# adding results to matrix
+all.results.pcsisr13[2,]<-round(data.matrix(fitmeasures(fit.weak,
+                                                        fit.measures = c("chisq", "df", 
+                                                                         "pvalue", "rmsea",
+                                                                         "rmsea.ci.lower",
+                                                                         "rmsea.ci.upper",
+                                                                         "cfi","tli",
+                                                                         "srmr"))),
+                       digits=3)
+
+fitmeasures(fit.weak, "chisq")/fitmeasures(fit.weak, "df")
+
+# comparing the models
+lavTestLRT(fit.configural,fit.weak) # significant, baseline
+```
+
+## strong invariance
+```{r}
+# fitting into lavaan
+fit.strong <- cfa(teen.model, data = tbi.pcsisr13, group = "tbi",
+                  group.equal = c("loadings", "intercepts"),
+                  std.lv = TRUE)
+
+# results
+summary(fit.strong)
+
+# adding results to matrix
+all.results.pcsisr13[3,]<-round(data.matrix(fitmeasures(fit.strong,
+                                                        fit.measures = c("chisq", "df", 
+                                                                         "pvalue", "rmsea",
+                                                                         "rmsea.ci.lower",
+                                                                         "rmsea.ci.upper",
+                                                                         "cfi","tli",
+                                                                         "srmr"))),
+                       digits=3)
+
+fitmeasures(fit.strong, "chisq")/fitmeasures(fit.strong, "df")
+
+# comparing the models
+lavTestLRT(fit.weak, fit.strong) # significant, strong
+lavTestLRT(fit.configural, fit.weak, fit.strong)
+```
+
